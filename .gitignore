@@ -1,0 +1,22 @@
+# 素材抓取的工作目录（不发布）
+_work/
+
+# IMA 上传临时文件
+_work/_tmp_body.json
+_work/_b*.json
+_work/_probe*
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 构建产物
+dist/
+*.log
