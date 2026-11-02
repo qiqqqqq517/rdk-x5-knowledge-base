@@ -1,4 +1,15 @@
-# 40PIN 管脚与 GPIO 编程
+---
+id: 02-基础开发-01-40PIN管脚与GPIO编程
+volume: 2
+volume_title: 基础开发
+title: 40PIN 管脚与 GPIO 编程
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [40PIN, GPIO, 引脚复用, Hobot.GPIO, 物理引脚号]
+summary: 40PIN 电气限制、X5 引脚复用对清单（spi2 与 pwm0/pwm1 双重冲突）、物理引脚号与 GPIO 编号的区别、Hobot.GPIO 用法、WiringPi 在 X5 不可用的原因。
+source_policy: "official-first, community-verified"
+---
+# 2.1 40PIN 管脚与 GPIO 编程
 
 ## 本章解决什么
 
@@ -6,9 +17,9 @@ RDK X5 的 40PIN 排针是绝大多数外设接入的第一入口，但它是**�
 
 ---
 
-## 1. 40PIN 的电气边界
+## 2.1.1 40PIN 的电气边界
 
-### 1.1 电平、耐压与电流
+### 2.1.1.1 电平、耐压与电流
 
 RDK X5 的 40PIN 上所有 GPIO 都是 **3.3V 逻辑**，最大耐压 3.46V；3.3V 电源轨最大 800mA 输出，5V 最大 500mA 输出，且在这两个最大输出电流下，要求输入适配器至少具备 25W 带载能力。
 
@@ -25,7 +36,7 @@ RDK X5 的 40PIN 上所有 GPIO 都是 **3.3V 逻辑**，最大耐压 3.46V；3.
 
 > 来源：官方文档 Basic_Application/01_40pin_user_sample/40pin_define（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/40pin_define）
 
-### 1.2 5V 针脚能不能当输入
+### 2.1.1.2 5V 针脚能不能当输入
 
 这是一个反复被问的问题，官方 FAQ 的答案是有条件的：
 
@@ -36,7 +47,7 @@ RDK X5 的 40PIN 上所有 GPIO 都是 **3.3V 逻辑**，最大耐压 3.46V；3.
 
 > 来源：官方文档 FAQ/interface（https://developer.d-robotics.cc/rdk_x_doc/FAQ/interface）、社区帖 33846（https://forum.d-robotics.cc/t/topic/33846）
 
-### 1.3 IO-DOMAIN：3.3V 不是永远成立
+### 2.1.1.3 IO-DOMAIN：3.3V 不是永远成立
 
 "40PIN 是 3.3V"这个说法在**板卡层面**成立，但在**芯片层面**是一个可配置项：X5 部分模块的电压域（IO-DOMAIN）可以在 1.8V 与 3.3V 之间配置，配置必须与外部电路的供电电压一致。
 
@@ -55,7 +66,7 @@ X5 的 IO-DOMAIN 定义在 SDK 的 `arch/arm64/boot/dts/hobot/pinmux-func.dtsi`�
 
 ---
 
-## 2. 40PIN 功能分配速查表
+## 2.1.2 40PIN 功能分配速查表
 
 官方 40PIN 定义以引脚图形式给出（`image-20220828203147852.png`），开发板丝印网表与图一致。下面是**官方文字文档明确记载**的引脚分配，凡本文档未用文字写明的引脚，一律以官方定义图为准，不做推测：
 
@@ -80,9 +91,9 @@ X5 的 IO-DOMAIN 定义在 SDK 的 `arch/arm64/boot/dts/hobot/pinmux-func.dtsi`�
 
 ---
 
-## 3. 管脚复用：`srpi-config` 是唯一正解
+## 2.1.3 管脚复用：`srpi-config` 是唯一正解
 
-### 3.1 复用组的官方表述（两个版本，有差异）
+### 2.1.3.1 复用组的官方表述（两个版本，有差异）
 
 40PIN 默认使能 UART、SPI、I2C、I2S 等专用功能。X5 上一部分接口存在复用，**同一组复用功能中只有开启其中一项才会生效；当一组内所有复用功能都关闭时，接口才表现为普通 GPIO。**
 
@@ -100,7 +111,7 @@ X5 的 IO-DOMAIN 定义在 SDK 的 `arch/arm64/boot/dts/hobot/pinmux-func.dtsi`�
 
 > 来源：官方文档 Basic_Application/01_40pin_user_sample/40pin_define、System_configuration/srpi-config（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/srpi-config）
 
-### 3.2 操作步骤
+### 2.1.3.2 操作步骤
 
 `srpi-config` 必须在**全屏命令行窗口**中运行，并且要 `sudo`——默认的 `sunrise` 账号不具备系统文件修改权限。
 
@@ -122,7 +133,7 @@ sudo srpi-config
 
 > 来源：官方文档 Basic_Application/01_40pin_user_sample/40pin_define、System_configuration/srpi-config
 
-### 3.3 复用与 GPIO 的互斥，是最容易踩的坑
+### 2.1.3.3 复用与 GPIO 的互斥，是最容易踩的坑
 
 顺序必须是：**先在 `srpi-config` 里把该组所有功能设为 `disabled` → 重启 → 再用 GPIO 库操作**。
 
@@ -132,9 +143,9 @@ sudo srpi-config
 
 ---
 
-## 4. GPIO 编程（Python）
+## 2.1.4 GPIO 编程（Python）
 
-### 4.1 库名与导入：`Hobot.GPIO`，不是 `hobot.gpio`
+### 2.1.4.1 库名与导入：`Hobot.GPIO`，不是 `hobot.gpio`
 
 官方预置的 GPIO Python 库是 `Hobot.GPIO`，大小写敏感：
 
@@ -157,7 +168,7 @@ sudo python3
 import Hobot.GPIO as GPIO      # 官方文档写法
 ```
 
-### 4.2 四种引脚编码模式
+### 2.1.4.2 四种引脚编码模式
 
 | 模式 | 含义 | 何时用 |
 | --- | --- | --- |
@@ -173,7 +184,7 @@ GPIO.getmode()             # 返回 BOARD/BCM/CVM/SOC 或 None
 
 **编码每次只能设置一次**，想重设必须先 `GPIO.cleanup()` 再 `setmode()`。
 
-### 4.3 输入、输出与清理
+### 2.1.4.3 输入、输出与清理
 
 ```python
 GPIO.setwarnings(False)                     # 抑制"管脚已被占用"类告警
@@ -197,7 +208,7 @@ GPIO.cleanup([31, 37])        # 清一组（列表）
 
 `GPIO.gpio_function(channel)` 返回 `IN` 或 `OUT`，用于确认某根针当前方向。
 
-### 4.4 边沿检测与中断
+### 2.1.4.4 边沿检测与中断
 
 三种方式，按适用场景选：
 
@@ -224,7 +235,7 @@ GPIO.remove_event_detect(37)   # 不再需要时注销
 - **所有回调跑在同一线程上**，因此多个回调是顺序执行、不是并发；
 - `bouncetime`（毫秒）用于机械按键去抖，把多次跳变合并为一次。
 
-### 4.5 预置例程
+### 2.1.4.5 预置例程
 
 `/app/40pin_samples/` 下预置了全套测试脚本：
 
@@ -251,7 +262,7 @@ sudo python3 ./button_led.py
 
 > 来源：官方文档 Basic_Application/01_40pin_user_sample/gpio（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/gpio）、同目录 40pin_define
 
-### 4.6 `hb_gpioinfo`：查 PinName / PinNode / PinNum
+### 2.1.4.6 `hb_gpioinfo`：查 PinName / PinNode / PinNum
 
 这是 X5 专用的 GPIO 帮助工具，解决"物理引脚 → 芯片管脚名 → 内核 GPIO 编号"的映射问题。它由驱动 + 应用两部分组成：驱动解析 `pinmux-gpio.dtsi` 并把 pinnode/pinname 导出到 debugfs，应用解析后打印。
 
@@ -281,9 +292,9 @@ line 0: unnamed input HSIO_ENET_MDC hsio_gpio0_0 466
 
 ---
 
-## 5. C/C++ 路径的真实可用性
+## 2.1.5 C/C++ 路径的真实可用性
 
-### 5.1 WiringPi：X3 能用，X5 不行
+### 2.1.5.1 WiringPi：X3 能用，X5 不行
 
 官方 FAQ 只给出了 X3 的 WiringPi 链接（"旭日 X3 派 WiringPi"），并说明 C/C++ 操作 40PIN "支持，可参考社区文章"。
 
@@ -303,7 +314,7 @@ Oops: Unable to determine board revision from /proc/cpuinfo
 
 **判断依据**：`gpio readall` 依赖 `/proc/cpuinfo` 里的 `board_id`，这是树莓派专有字段，X5 没有。这不是配置问题，是设计前提不成立。因此**不要指望把 X3 的 WiringPi C 代码直接搬到 X5 上跑**，尤其涉及 PWM 的部分。
 
-### 5.2 可行的 C/C++ 替代方案
+### 2.1.5.2 可行的 C/C++ 替代方案
 
 按可靠度排序：
 
@@ -340,9 +351,9 @@ cat /sys/kernel/debug/gpio
 
 ---
 
-## 6. I2C
+## 2.1.6 I2C
 
-### 6.1 默认总线
+### 2.1.6.1 默认总线
 
 | 平台 | 默认使能 | 物理引脚 | IO 电压 |
 | --- | --- | --- | --- |
@@ -351,7 +362,7 @@ cat /sys/kernel/debug/gpio
 
 X5 比 X3 多一路默认 I2C，这是移植时的直接差异点：X3 上写死 `/dev/i2c-0` 且接在 3/5 脚的代码，搬到 X5 上会打到 27/28 脚对应的总线（I2C0），现象是"程序不报错但读不到数据"。
 
-### 6.2 测试与扫描
+### 2.1.6.2 测试与扫描
 
 ```bash
 # 列出系统已使能的 I2C 控制器
@@ -393,16 +404,16 @@ i2cdetect -y -r 5 0x29 0x29
 
 ---
 
-## 7. SPI
+## 2.1.7 SPI
 
-### 7.1 默认总线
+### 2.1.7.1 默认总线
 
 | 平台 | 默认使能 | 物理引脚 | 片选数 | IO 电压 |
 | --- | --- | --- | --- | --- |
 | RDK X3 | SPI2 | 19、21、23、24 | 1 | 3.3V |
 | RDK X5 | **SPI1** | 19、21、23、24、26 | 2 | 3.3V |
 
-### 7.2 回环测试
+### 2.1.7.2 回环测试
 
 把 **MISO 与 MOSI 用跳线帽短接**，然后运行测试：写入什么就该读回什么。
 
@@ -432,7 +443,7 @@ spi.max_speed_hz = 12000000    # 12MHz
 resp = spi.xfer2([0x55, 0xAA])
 ```
 
-### 7.3 SPI 做从机（slave）时的吞吐边界
+### 2.1.7.3 SPI 做从机（slave）时的吞吐边界
 
 把 X5 的 SPI 配成 slave 是社区高频需求（MCU 主控、X5 做协处理）。实测边界：
 
@@ -446,9 +457,9 @@ resp = spi.xfer2([0x55, 0xAA])
 
 ---
 
-## 8. UART
+## 2.1.8 UART
 
-### 8.1 默认总线
+### 2.1.8.1 默认总线
 
 | 平台 | 默认使能 | 物理引脚 | IO 电压 |
 | --- | --- | --- | --- |
@@ -457,7 +468,7 @@ resp = spi.xfer2([0x55, 0xAA])
 
 注意 `/dev/ttyS0` 是**系统调试口**，官方明确"不建议对它进行测试，除非你完全明白它的作用"。把业务数据打到 ttyS0 上，轻则污染内核日志，重则顶掉登录控制台。
 
-### 8.2 回环测试
+### 2.1.8.2 回环测试
 
 把 **TXD 与 RXD 短接**：
 
@@ -477,7 +488,7 @@ Recv: AA55
 
 发送与接收一致即为通过。
 
-### 8.3 在 40PIN 上确认设备节点
+### 2.1.8.3 在 40PIN 上确认设备节点
 
 不要背总线号，直接看：
 
@@ -490,9 +501,9 @@ ls /dev/ttyS*                 # 只看 SoC 串口
 
 ---
 
-## 9. PWM
+## 2.1.9 PWM
 
-### 9.1 硬件资源与默认状态
+### 2.1.9.1 硬件资源与默认状态
 
 `Hobot.GPIO` 库**只在带硬件 PWM 控制器的引脚上支持 PWM**，不像 `RPi.GPIO` 那样提供软件模拟 PWM。
 
@@ -516,7 +527,7 @@ X5 的 8 路 PWM 分配：
 
 X5 **默认只使能 PWM3**。要用其他组，必须 `srpi-config` → `3 Interface Options` → `I3 Peripheral bus config` → 把对应 pwm 组切到 `okay`，重启后生效；同时该组占用的引脚就不能再作别的用途。
 
-### 9.2 频率范围：官方与社区说法冲突
+### 2.1.9.2 频率范围：官方与社区说法冲突
 
 这是一个必须点明的冲突：
 
@@ -532,7 +543,7 @@ X5 **默认只使能 PWM3**。要用其他组，必须 `srpi-config` → `3 Inte
 
 但这不代表"舵机随便驱动"：40PIN 的 5V 轨最大 500mA，舵机堵转电流轻松超过 1A，从 40PIN 取电给舵机是社区反复警告的错误做法——必须独立供电、只共地。
 
-### 9.3 可运行示例（修正官方排版截断）
+### 2.1.9.3 可运行示例（修正官方排版截断）
 
 官方 `pwm.md` 中的示例代码在网页抓取时被截断（`if val` 之后直接接了中文说明），下面给出完整逻辑，占空比从 25% 起、每 0.25 秒 ±5%、在 0 与 100 之间往返：
 
@@ -594,9 +605,9 @@ sudo python3 ./simple_pwm.py
 
 ---
 
-## 10. 四段式排障
+## 2.1.10 四段式排障
 
-### 10.1 PWM 完全没有输出
+### 2.1.10.1 PWM 完全没有输出
 
 **现象**
 
@@ -633,7 +644,7 @@ sudo python3 -c "import Hobot.GPIO as G; print(G.VERSION, G.model)"
 
 在写代码之前先跑官方 `simple_pwm.py`（默认引脚 33、默认已使能），能出波形说明库和权限都没问题，再把引脚换到目标针脚——把"库问题"和"复用问题"分开验证。
 
-### 10.2 `import Hobot.GPIO` 失败 / VS Code 里报红线
+### 2.1.10.2 `import Hobot.GPIO` 失败 / VS Code 里报红线
 
 **现象**
 
@@ -669,7 +680,7 @@ VS Code 中按 `Ctrl+Shift+P` → `Python: Select Interpreter` → 选 `/usr/bin
 
 > 来源：社区帖 35351（https://forum.d-robotics.cc/t/topic/35351）
 
-### 10.3 `i2cdetect` 扫不到从设备
+### 2.1.10.3 `i2cdetect` 扫不到从设备
 
 **现象**
 

@@ -1,4 +1,15 @@
-# srpi-config、config.txt 与 Thermal 频率管理
+---
+id: 05-进阶驱动与系统-04-srpi-config与config.txt与Thermal频率管理
+volume: 5
+volume_title: 进阶驱动与系统
+title: srpi-config、config.txt 与 Thermal 频率管理
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [srpi-config, config.txt, Thermal, 超频, 调频]
+summary: srpi-config 全部选项、config.txt 语法与 dtoverlay、Thermal 两个 zone 的差异、CPU/GPU/BPU/DDR 调频与超频边界。
+source_policy: "official-first, community-verified"
+---
+# 5.4 srpi-config、config.txt 与 Thermal 频率管理
 
 ## 本章解决什么
 
@@ -8,9 +19,9 @@ X5 上有一批「不需要编译、改配置重启就生效」的系统级开�
 
 > 来源：官方文档 System_configuration__srpi-config（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/srpi-config）、System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）、System_configuration__frequency_management（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/frequency_management）
 
-## srpi-config 全部选项
+## 5.4.1 srpi-config 全部选项
 
-### 入口与前提
+### 5.4.1.1 入口与前提
 
 ```bash
 sudo srpi-config
@@ -22,7 +33,7 @@ sudo srpi-config
 
 `srpi-config` 需要在**全屏命令行窗口**中运行。
 
-### 菜单结构总览
+### 5.4.1.2 菜单结构总览
 
 | 主菜单 | 子项 | 作用 |
 | --- | --- | --- |
@@ -35,7 +46,7 @@ sudo srpi-config
 | Sensor Profiles | IMX219 Switch ISP | 摄像头效果库 |
 | Update / About / Finish | — | 工具自身维护 |
 
-### System Options
+### 5.4.1.3 System Options
 
 | 子项 | 说明 |
 | --- | --- |
@@ -46,7 +57,7 @@ sudo srpi-config
 | Power LED | 在型号允许时更改电源 LED 行为，默认是熄灭或闪烁 |
 | Browser | 桌面系统下设置默认浏览器，不配置则默认 firefox；可 `sudo apt install chromium` 安装 chromium |
 
-### Display Options
+### 5.4.1.4 Display Options
 
 | 子项 | 说明 | 平台限制 |
 | --- | --- | --- |
@@ -59,7 +70,7 @@ X5 的 DSI 与 HDMI 在硬件上互斥，只能二选一。系统默认启用 HD
 
 > 来源：社区帖 34342（https://forum.d-robotics.cc/t/topic/34342）
 
-### Interface Options
+### 5.4.1.5 Interface Options
 
 | 子项 | 说明 |
 | --- | --- |
@@ -106,7 +117,7 @@ cat /boot/config.txt
 
 安装和卸载音频转接板。可能支持的板子包括 Audio Driver HAT V1、Audio Driver HAT V2、WM8960 Audio HAT，不同硬件能支持的转接板也有差别。
 
-### Performance Options
+### 5.4.1.6 Performance Options
 
 #### CPU frequency
 
@@ -120,7 +131,7 @@ cat /boot/config.txt
 
 这里要澄清一个数字上的差异：`srpi-config` 说默认 672MB，而 `config.txt` 文档给出的三个 ION 区域默认值是 `ion_reserved_size` 320M、`ion_carveout_size` 320M、`ion_cma_size` 128M，三者相加 768M。两处口径不同（672 vs 768），是因为一个说的是「可用配置的常用值」、一个是分区默认上限，实际以 `dmesg | grep "Reserved ion"` 的输出为准。
 
-### Localisation Options
+### 5.4.1.7 Localisation Options
 
 | 子项 | 说明 |
 | --- | --- |
@@ -128,7 +139,7 @@ cat /boot/config.txt
 | Time Zone | 选择时区，从地区开始（如亚洲→上海），键入字母可跳到列表对应位置 |
 | Keyboard | 读取全部键盘类型需要较长时间；更改通常立即生效，但可能需要重启 |
 
-### Advanced Options
+### 5.4.1.8 Advanced Options
 
 | 子项 | 说明 |
 | --- | --- |
@@ -138,7 +149,7 @@ cat /boot/config.txt
 
 `Expand Filesystem` 的典型场景：系统是从另一张已完成初始化的卡复制来的，TF 卡容量不会被自动调整为当前卡容量，用这项完成扩展。
 
-### Sensor Profiles
+### 5.4.1.9 Sensor Profiles
 
 提供多套 Sensor 效果库配置，用于适配同一 Sensor 的不同模组形态。由于模组在光学和调校上的差异，最终成像效果及强度会有所不同，因此需要分别进行 ISP 校准。
 
@@ -151,21 +162,21 @@ X5 上现有的选项是 **IMX219 Switch ISP**：
 
 这个菜单项的存在本身说明一件事：**同一个 sensor 芯片，不同镜头模组需要不同的效果库**。这直接解释了第 3 章里 OV5647 适配失败的原因——`mipi_cam/config/` 下没有对应校准文件，pipeline 起不来。
 
-### Finish
+### 5.4.1.10 Finish
 
 完成更改后点 Finish。如果修改需要重启才生效，系统会提示是否立即重启。
 
 > 来源：官方文档 System_configuration__srpi-config（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/srpi-config）
 
-## config.txt 完整语法
+## 5.4.2 config.txt 完整语法
 
-### 基本机制
+### 5.4.2.1 基本机制
 
 `config.txt` 在 **uboot 阶段被读取**，用于设置启动时的系统配置，支持修改设备树配置、IO 管脚状态、ION 内存、CPU 频率等。文件位置是 `/boot/config.txt`，**必须以 root 身份编辑**。如果文件不存在，直接新建一个文本文件即可。
 
 这一点是 `config.txt` 相对其他配置方式的核心优势：**改完重启就生效，不需要重新编译内核或设备树**。
 
-### 前置条件（不满足会静默失败）
+### 5.4.2.2 前置条件（不满足会静默失败）
 
 | 条件 | 要求 |
 | --- | --- |
@@ -181,7 +192,7 @@ miniboot 升级参考 `rdk-miniboot-update` 命令在板更新。
 
 因为 `srpi-config` 修改的也是同一批参数，而 `config.txt` 里的过滤项可以按硬件型号屏蔽配置段。加了过滤项之后，工具写的配置可能落在被过滤掉的分段里，表现为「工具里改了但没生效」。
 
-### dtdebug
+### 5.4.2.3 dtdebug
 
 ```text
 dtdebug=1
@@ -191,7 +202,7 @@ dtdebug=1
 
 这是排查 overlay 问题的第一手段——串口能看到 overlay 到底应用了没有、哪一条失败。
 
-### dtoverlay
+### 5.4.2.4 dtoverlay
 
 支持设备树覆盖，提供更灵活的设备树调整方式。
 
@@ -211,7 +222,7 @@ dtoverlay=dtoverlay_spi5_spidev
 
 **必须记住的限制**：CAN 设备也接在 spi5 上，**spidev 和 can 只能二选一**。
 
-### X5 配置 ION：三条 ion 参数
+### 5.4.2.5 X5 配置 ION：三条 ion 参数
 
 这是 X5 与 X3 差异最大的一处。X5 通过 `ion_reserved_size`、`ion_carveout_size`、`ion_cma_size` 修改 boot 环境变量，进而修改 ION 分区大小：
 
@@ -258,7 +269,7 @@ bootargs=console=tty1 console=ttyS0,115200 rootfstype=ext4 rw rootwait root=/dev
 
 > 来源：官方文档 System_configuration__config_txt、社区帖 32485（https://forum.d-robotics.cc/t/topic/32485）
 
-### dtparam：总线使能开关
+### 5.4.2.6 dtparam：总线使能开关
 
 支持设置 uart、i2c、spi、i2s 等总线的使能与关闭。
 
@@ -302,7 +313,7 @@ X5 同样需要注意复用关系：当一行的所有接口都为 disable 时�
 
 > 来源：官方文档 System_configuration__config_txt、社区帖 35761（https://forum.d-robotics.cc/t/topic/35761）
 
-### IO 初始化：gpio 参数
+### 5.4.2.7 IO 初始化：gpio 参数
 
 支持设置 IO 的功能复用、输入输出模式、输出高低电平、上下拉模式。**应选择 BOARD 编码对应的 GPIO 编号**。
 
@@ -343,7 +354,7 @@ gpio=6=op,dh,pu
 
 > 来源：官方文档 System_configuration__config_txt
 
-### 温度控制：throttling_temp 与 shutdown_temp
+### 5.4.2.8 温度控制：throttling_temp 与 shutdown_temp
 
 ```text
 # 降频温度点：超过此温度 CPU 和 BPU 降低频率
@@ -359,7 +370,7 @@ shutdown_temp=112000
 - 降频后 **CPU 最低降到 240MHz，BPU 最低降到 400MHz**；
 - 宕机后**设备不会自动重启**，需要手动断电再上电。所以散热做不好不只是性能问题，是可用性问题。
 
-### 选项过滤：按硬件型号分节
+### 5.4.2.9 选项过滤：按硬件型号分节
 
 支持用 `[]` 设置过滤项。**过滤项的设置需要放在配置文件尾部**，因为文件前面未添加过滤项的部分属于 `all`；一旦添加过滤设置，则之后的配置只属于该过滤属性，直到文件结尾或设置另一个过滤项。
 
@@ -374,7 +385,7 @@ shutdown_temp=112000
 
 **注意 `[x5-rdk]` 只对应 RDK X5 V0.1**。X5 V1.0 和 X5 MD 系列在这张表里没有对应过滤项——这意味着想给 X5 V1.0 做差异化配置，不能靠过滤项，只能靠分板烧录不同的 `config.txt`。这是一个文档覆盖的空白点，实际项目里要自己处理。
 
-### 电压域：voltage_domain
+### 5.4.2.10 电压域：voltage_domain
 
 ```text
 # 40 Pin 电压域配置，3.3V 或 1.8V，默认 3.3V
@@ -387,7 +398,7 @@ voltage_domain=3.3V
 
 > 来源：官方文档 System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）
 
-### X3 与 X5 的 config.txt 参数对照
+### 5.4.2.11 X3 与 X5 的 config.txt 参数对照
 
 把上面散落的差异汇总成一张表，写配置前对照一遍：
 
@@ -406,9 +417,9 @@ voltage_domain=3.3V
 
 > 来源：官方文档 System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）
 
-## Thermal 温控体系
+## 5.4.3 Thermal 温控体系
 
-### X5 的三路温度传感器
+### 5.4.3.1 X5 的三路温度传感器
 
 X5 上有三个温度传感器，显示 DDR/BPU/CPU 的温度：
 
@@ -434,7 +445,7 @@ cat /sys/class/hwmon/hwmon0/temp3_input   # CPU
 
 它说的是 BPU 温度没有挂到任何 thermal zone 上（因为 thermal_zone1 整体管 CPU/BPU/GPU 的降频），不是错误。
 
-### X5 的两个 thermal zone
+### 5.4.3.2 X5 的两个 thermal zone
 
 | Zone | 关联 cooling 设备 | trip_point 数量 | 用途 |
 | --- | --- | --- | --- |
@@ -450,7 +461,7 @@ X5 一共有四个 cooling（降温）设备：
 | `cooling_device2` | gpu |
 | `cooling_device3` | ddr |
 
-### 温控策略
+### 5.4.3.3 温控策略
 
 ```bash
 # 查看当前策略
@@ -476,7 +487,7 @@ echo user_space | sudo tee /sys/class/thermal/thermal_zone0/policy
 
 选择哪个取决于产品需要：`step_wise` 是「够用就好」的默认策略；如果你的产品需要在特定温度做特定动作（比如先关 BPU 再降 CPU、或者主动降帧率），就用 `user_space` 自己在应用层接管。
 
-### 温度点的设置
+### 5.4.3.4 温度点的设置
 
 **thermal_zone0**（DDR 调频温度，当前默认 95℃）：
 
@@ -508,7 +519,7 @@ echo 105000 | sudo tee /sys/devices/virtual/thermal/thermal_zone1/trip_point_2_t
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_thermal_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_thermal_dev）、System_configuration__frequency_management（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/frequency_management）
 
-### 关于「另一套阈值」的说明
+### 5.4.3.5 关于「另一套阈值」的说明
 
 社区帖 35824 里有一个重要提醒，值得记录：
 
@@ -526,9 +537,9 @@ cat /sys/class/thermal/thermal_zone*/trip_point_*_temp
 
 > 来源：社区帖 35824（https://forum.d-robotics.cc/t/topic/35824）
 
-## CPU 频率管理
+## 5.4.4 CPU 频率管理
 
-### 两套不同的路径
+### 5.4.4.1 两套不同的路径
 
 X5 上控制 CPU 频率有两条路径，都在 `/sys/devices/system/cpu/` 下，但挂载结构不同：
 
@@ -562,7 +573,7 @@ X5 上控制 CPU 频率有两条路径，都在 `/sys/devices/system/cpu/` 下�
 
 **`scaling_cur_freq` 与 `cpuinfo_cur_freq` 的区别很重要**：前者是软件缓存，后者是真实硬件读数。怀疑实际频率与设置不符时（比如超频没生效），要看 `cpuinfo_cur_freq`。
 
-### X5 支持的频率与 governor
+### 5.4.4.2 X5 支持的频率与 governor
 
 ```bash
 cat /sys/devices/system/cpu/cpufreq/policy0/scaling_available_frequencies
@@ -608,7 +619,7 @@ governor=userspace
 frequency=1200000
 ```
 
-### CPU 超频
+### 5.4.4.3 CPU 超频
 
 X5 的超频把最高频率从 **1.5GHz 提升到 1.8GHz**：
 
@@ -658,9 +669,9 @@ cat /sys/class/socinfo/soc_name
 
 > 来源：官方文档 System_configuration__frequency_management（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/frequency_management）、Advanced_development__linux_development__driver_development_x5__driver_lowpower（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_lowpower）
 
-## 功耗与散热策略
+## 5.4.5 功耗与散热策略
 
-### 硬件层面的四个可调对象
+### 5.4.5.1 硬件层面的四个可调对象
 
 X5 共有 CPU / GPU 3D / BPU / DDR 支持调频，**CPU 同时支持调压**。降低功耗可以从降低电压、降低时钟频率、散热三方面入手；负载减轻也能降功耗。
 
@@ -701,7 +712,7 @@ echo simple_ondemand | sudo tee /sys/class/devfreq/soc:ddrc-freq/governor
 
 注意这里的频点列表与官方 lowpower 文档给出的（266M/1066M/2133M/3200M）不同——不同 DDR 颗粒支持的频点确实不一样，这正是官方文档强调「不同 DDR 颗粒支持的频点可能不一致」的原因。**以你自己板子上 `available_frequencies` 的输出为准**。
 
-### CPU hotplug
+### 5.4.5.2 CPU hotplug
 
 CPU core 不用时可以拔出进一步降功耗。**除 core0 不支持 hotplug 外，core1~core7 均支持**。
 
@@ -710,7 +721,7 @@ echo 0 | sudo tee /sys/devices/system/cpu/cpu1/online   # disable cpu1
 echo 1 | sudo tee /sys/devices/system/cpu/cpu1/online   # enable cpu1
 ```
 
-### 设备电源域：最有效的降功耗手段
+### 5.4.5.3 设备电源域：最有效的降功耗手段
 
 > 对于 BPU/GPU/ISP/VIDEO CODEC/JPEG/HIFI 都是有独立的电源控制，目前这些设备只有在使用时（驱动 open）上电，使用结束（驱动 close）就会下电。可尽量降低 X5 SoC 的整体功耗。
 
@@ -727,7 +738,7 @@ echo 1 | sudo tee /sys/devices/system/cpu/cpu1/online   # enable cpu1
 
 > X5 的 BPU/GPU/ISP/CODEC 是独立电源域，驱动 close 即下电，所以释放不再使用的模型/编解码/摄像头节点，比调 governor 更有效；模型降分辨率、降帧率同样直接减热。
 
-### 休眠唤醒
+### 5.4.5.4 休眠唤醒
 
 ```bash
 # 休眠
@@ -736,7 +747,7 @@ hobot-suspend
 
 也可以通过长按按键休眠；短按按键唤醒。
 
-### 散热问题实战：怎么判断是 DDR 还是 CPU 过热
+### 5.4.5.5 散热问题实战：怎么判断是 DDR 还是 CPU 过热
 
 社区帖 35824 是一个 2026 年 10 月的高质量问答，用户问「X5 EVB 有散热问题，加风扇看起来可以，有相关温度参数技术要求吗」，并猜测是 DDR 过热还是 CPU 过热。回复里的方法论值得完整记录。
 
@@ -793,7 +804,7 @@ cat /sys/class/devfreq/soc:ddrc-freq/cur_freq
 
 > 来源：社区帖 35824（https://forum.d-robotics.cc/t/topic/35824）
 
-### 用 hrut_somstatus 一眼看全
+### 5.4.5.6 用 hrut_somstatus 一眼看全
 
 ```bash
 sudo hrut_somstatus
@@ -821,11 +832,11 @@ bpu1: 400000000 1000000000 1000000000 0
 
 > 来源：官方文档 Appendix__rdk-command-manual__cmd_hrut_somstatus（https://developer.d-robotics.cc/rdk_x_doc/Appendix/rdk-command-manual/cmd_hrut_somstatus）
 
-## 开机自启动
+## 5.4.6 开机自启动
 
 配置需要持久化的温控点、频率设置、天线选项时，都需要自启动。Ubuntu 有两种常见做法。
 
-### 方式一：init.d 脚本 + systemd
+### 5.4.6.1 方式一：init.d 脚本 + systemd
 
 创建启动脚本 `/etc/init.d/your_script_name`：
 
@@ -865,7 +876,7 @@ systemctl status your_script_name.service
      Active: active (exited) since Wed 2023-04-19 15:01:12 CST; 57s ago
 ```
 
-### 方式二：rc.local
+### 5.4.6.2 方式二：rc.local
 
 ```bash
 sudo vim /etc/rc.local

@@ -1,4 +1,15 @@
-# 编解码、RTSP 与 ROS1 兼容
+---
+id: 04-ROS2与TROS-04-编解码RTSP与ROS1兼容
+volume: 4
+volume_title: ROS2 与 TROS
+title: 编解码、RTSP 与 ROS1 兼容
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [hobot_codec, RTSP, ROS1, ros1_bridge, COLCON_IGNORE]
+summary: hobot_codec 编解码与 in_format 精确匹配、RTSP 拉流推流、ROS1 兼容的三条路线（X5 无 Ubuntu 20.04 的硬约束）。
+source_policy: "official-first, community-verified"
+---
+# 4.4 编解码、RTSP 与 ROS1 兼容
 
 ## 本章解决什么
 
@@ -6,9 +17,9 @@
 
 三段各有各的坑：编解码的坑在硬件资源上限与帧率计算，RTSP 的坑在网络抖动导致解码器崩溃，ROS1 兼容的坑在 Ubuntu 20.04 这个硬约束上。本章逐段给出可用配置和已知限制。
 
-## hobot_codec：硬件编解码
+## 4.4.1 hobot_codec：硬件编解码
 
-### 能力边界
+### 4.4.1.1 能力边界
 
 `hobot_codec` 调的是 X5 的硬件编解码单元（VDEC/VENC/JPEG）。硬件本身的规格：
 
@@ -28,7 +39,7 @@
 
 **"编解码同时"这条是资源规划的关键**：如果你既要解码一路 RTSP、又要编码一路给 Web 展示，两者的合计吞吐不能超过 4K@30fps 的等效带宽。1080p@30fps 约等于 4K@30fps 的 1/4，所以理论上能同时跑 2 路解码 + 2 路编码——但实际还要留余量给 ISP/VSE。
 
-### 参数全表
+### 4.4.1.2 参数全表
 
 `hobot_codec` 启动时会把所有参数打出来，这是最权威的清单：
 
@@ -72,7 +83,7 @@
 
 > 来源：社区帖 28778（https://forum.d-robotics.cc/t/topic/28778）
 
-### 参数说明
+### 4.4.1.3 参数说明
 
 | 参数 | 方向 | 含义 | 取值 |
 | --- | --- | --- | --- |
@@ -91,7 +102,7 @@
 | `dump_file_prefix` | 调试 | 落盘文件名前缀 | `./dump_codec_output` |
 | `dump_frame_count` | 调试 | 落盘帧数，`-1` 不限 | `-1` / `10` |
 
-### 版本变化：配置项被删除和新增
+### 4.4.1.4 版本变化：配置项被删除和新增
 
 RDKOS 3.4.1 里有一条专门针对 `hobot_codec` 的改动：
 
@@ -103,7 +114,7 @@ RDK 总览页的对应写法：「`hobot_codec` 优化：优化了图像编解�
 
 **这条的实用价值**：`dump_output`、`dump_file_prefix`、`dump_frame_count` 这一组「落盘调试」参数就是 3.4.1 前后加入/调整的。在 3.3.3 及更早的系统上，这些参数可能不存在或名字不同。抄 launch 配置时如果报「unknown parameter」，先查系统版本。
 
-### 版本变化：帧率计算错误修复
+### 4.4.1.5 版本变化：帧率计算错误修复
 
 3.1.1 的修复记录：
 
@@ -123,7 +134,7 @@ RDK 总览页的对应写法：「`hobot_codec` 优化：优化了图像编解�
 
 稳定在 30 附近说明链路正常；掉到 23 说明有问题。但**只有在 3.1.1 及以上的系统上这个数字可信**。
 
-### 四种典型用法
+### 4.4.1.6 四种典型用法
 
 **用法一：JPEG → NV12（给推理用，走共享内存）**
 
@@ -206,9 +217,9 @@ bgr2jpeg = Node(
 
 这是官方 AMR 案例里的完整节点写法，可以直接当模板用。
 
-## hobot_rtsp_client：拉流
+## 4.4.2 hobot_rtsp_client：拉流
 
-### 智能盒子方案
+### 4.4.2.1 智能盒子方案
 
 `hobot_rtsp_client` 是「智能视频盒子」方案的核心节点，官方发布记录里描述的定位：
 
@@ -218,7 +229,7 @@ bgr2jpeg = Node(
 功能包总表里的描述更简短：「智能盒子：RTSP 拉流 + 解码 + 算法推理」。
 > 来源：社区帖 35812（https://forum.d-robotics.cc/t/topic/35812）
 
-### 参数
+### 4.4.2.2 参数
 
 从官方 launch 与社区改造版可以归纳出：
 
@@ -231,7 +242,7 @@ bgr2jpeg = Node(
 
 > 来源：社区帖 35041（https://forum.d-robotics.cc/t/topic/35041）、社区帖 28952（https://forum.d-robotics.cc/t/topic/28952）
 
-### 单路启动
+### 4.4.2.3 单路启动
 
 ```bash
 source /opt/tros/humble/setup.bash
@@ -245,7 +256,7 @@ ros2 launch hobot_rtsp_client hobot_rtsp_client_websocket.launch.py \
 
 > 来源：社区帖 28952（https://forum.d-robotics.cc/t/topic/28952）
 
-### 多路启动与 ROS_DOMAIN_ID 隔离
+### 4.4.2.4 多路启动与 ROS_DOMAIN_ID 隔离
 
 社区的实测做法是**每路用不同的 `ROS_DOMAIN_ID`**，让多路之间话题互不干扰：
 
@@ -267,7 +278,7 @@ ros2 launch hobot_rtsp_client hobot_rtsp_client_websocket.launch.py \
 
 **但这位用户的原问题是「只有一路流有算法显示，其它路的流不显示」**，说明这个做法并不完整——`ROS_DOMAIN_ID` 隔离能解决话题冲突，但算法节点（`hobot_dnn_detection`）也只有一路在发布。要让每路都有独立的算法结果，每路都得有自己完整的「解码 + 推理」节点链，而不只是多开 rtsp_client。
 
-### 多路崩溃：VDEC 资源上限
+### 4.4.2.5 多路崩溃：VDEC 资源上限
 
 社区里一个 6 路 H.265@30fps 的案例，报错原文：
 
@@ -328,7 +339,7 @@ done
 
 > 来源：社区帖 35041（https://forum.d-robotics.cc/t/topic/35041）
 
-### 崩溃时的取证命令
+### 4.4.2.6 崩溃时的取证命令
 
 ```bash
 # 查看 VDEC 通道使用情况
@@ -349,7 +360,7 @@ ps -eLo pid,tid,state,wchan | grep -i vdec
 
 关注点：`vdec channel timeout`、`vdec resource busy`、`HB_VDEC_GetFrame` 的错误码。如果崩溃总是同一通道（如 `ch_5`），说明是通道级资源耗尽而不是全局问题。
 
-### 网络抖动导致解码失败
+### 4.4.2.7 网络抖动导致解码失败
 
 另一个独立的故障模式：不是多路并发，而是单路网络抖动。
 
@@ -378,9 +389,9 @@ ffplay -rtsp_transport tcp rtsp://admin:222107qq@192.168.55.170:554/Streaming/Ch
 2. 把 `transport_0` 从 `udp` 改成 `tcp`。UDP 不重传，丢包直接丢帧；TCP 会重传，代价是延迟抖动。
 3. 在摄像头 Web 端把 GOP/关键帧间隔调小（如 30 或 60 帧），这样丢包后能更快恢复。
 
-## RTSP 推流与 C 接口示例
+## 4.4.3 RTSP 推流与 C 接口示例
 
-### 官方现有的两条 C 示例
+### 4.4.3.1 官方现有的两条 C 示例
 
 板子上 `/app/cdev_demo/` 下有两套与编解码直接相关的 C 示例：
 
@@ -389,7 +400,7 @@ ffplay -rtsp_transport tcp rtsp://admin:222107qq@192.168.55.170:554/Streaming/Ch
 | `decode2display` | 本地 H.264 文件 | HDMI 显示 | 验证纯解码通路 |
 | `rtsp2display` | RTSP 流 | HDMI 显示 | 验证网络 + 解码 + 显示全链路 |
 
-### decode2display
+### 4.4.3.2 decode2display
 
 ```bash
 cd /app/cdev_demo/decode2display
@@ -413,7 +424,7 @@ decode2display sample -- An example of video decoding to the display
 实现上「基于 spcdev 接口实现，解析输入给 main 的参数，通过 `libspcdev.so` API，获取到显示屏的分辨率之后，初始化解码器和显示模块，根据适配的分辨率和显示器的分辨率，判断是否需要使用 VPS 进行」缩放。
 > 来源：官方文档 Basic_Application/cdev_demo_sample/decode2display（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/cdev_demo_sample/decode2display）
 
-### rtsp2display
+### 4.4.3.3 rtsp2display
 
 这条更有参考价值，因为它演示了从网络拉流到解码显示的完整链路。
 
@@ -466,7 +477,7 @@ sudo ./rtsp2display -i rtsp://127.0.0.1/1920x1080.h264 -t tcp
 
 这条链路对应四个 API 模块：`sp_decoder_*`（解码）、`sp_vps_*`（缩放/格式转换）、`sp_display_*`（DRM 显示）、`sp_decoder_set_img`（喂码流）。日志里看到的 `sp_open_vps success!` 就是 VPS 初始化成功。
 
-### 用 ROS 节点做同样的验证（不写代码）
+### 4.4.3.4 用 ROS 节点做同样的验证（不写代码）
 
 官方社区给了一条完全不用写代码的验证路径：
 
@@ -510,9 +521,9 @@ ros2 launch hobot_codec hobot_codec.launch.py \
 
 **这套流程的价值**：它把「代码是否正确」这个变量排除掉了。如果你的自写程序解不了某个码流，先用这套 ROS 节点跑一遍——能解说明码流没问题，问题在你的代码；不能解说明码流本身有问题（加密、非标准 profile、GOP 太长）。
 
-## ROS1 兼容
+## 4.4.4 ROS1 兼容
 
-### 硬约束：X5 没有 Ubuntu 20.04
+### 4.4.4.1 硬约束：X5 没有 Ubuntu 20.04
 
 这是所有 ROS1 方案的前提。ROS1 Noetic 官方只支持 Ubuntu 20.04，而 **X5 只有 Ubuntu 22.04**。
 
@@ -532,7 +543,7 @@ ros2 launch hobot_codec hobot_codec.launch.py \
 | B：Docker 里跑 ROS1 | 可行但有坑 | 网络/设备/库依赖都要透传 |
 | C：ROS1 算法重写成 ROS2 | 长期最优 | 工作量大 |
 
-### 路线 A：ros1_bridge
+### 4.4.4.2 路线 A：ros1_bridge
 
 `ros1_bridge` 是官方 ROS 项目，作用是让 ROS1 与 ROS2 节点互相收发消息。它本身必须**同时 source 了 ROS1 和 ROS2 的环境**才能编译运行——这就决定了它没法在只装了 ROS2 的 X5 上原生跑。
 
@@ -567,7 +578,7 @@ ros2 run ros1_bridge dynamic_bridge --bridge-all-topics=false --bridge-topic sen
 
 > 来源：官方文档 Application_case/amr（https://developer.d-robotics.cc/rdk_x_doc/Application_case/amr）
 
-### 参数含义与版本对应
+### 4.4.4.3 参数含义与版本对应
 
 | 参数 | 含义 | 注意 |
 | --- | --- | --- |
@@ -595,7 +606,7 @@ ls /opt/tros
 
 装错版本的典型表现：`ros2 run ros1_bridge dynamic_bridge` 报找不到可执行文件，或找到但一启动就因为 ABI 不匹配崩溃。
 
-### 桥接的启动顺序
+### 4.4.4.4 桥接的启动顺序
 
 严格按这个顺序，错一步就不通：
 
@@ -622,7 +633,7 @@ rostopic list
 
 **关键点：source 顺序**。必须先 ROS1 后 ROS2，反过来 `roscore` 相关的环境变量会被覆盖。这是 `ros1_bridge` 的通用要求，不是 X5 特有。
 
-### 路线 B：Docker 里跑 ROS1（已知限制）
+### 4.4.4.5 路线 B：Docker 里跑 ROS1（已知限制）
 
 社区里有一个非常完整的失败记录，值得逐条读完，因为它把这条路的所有坑都踩了一遍。
 
@@ -660,7 +671,7 @@ rostopic list
 
 **这个方案值得推广**：桥接是个 CPU 密集 + 双环境依赖的活，放在板子上既抢资源又难凑依赖，放到局域网里另一台 Ubuntu 20.04 机器（物理机或 WSL）上，板子只负责出图/推理，职责清晰。
 
-### 桥接方案的已知限制
+### 4.4.4.6 桥接方案的已知限制
 
 | 限制 | 说明 | 规避 |
 | --- | --- | --- |
@@ -673,7 +684,7 @@ rostopic list
 **第一条是最容易被低估的**。桥接进程本身要序列化/反序列化，图像这种大消息过桥一次，CPU 开销可能比解码还高。所以官方 AMR 案例里桥接图像是为了**录 bag 做标定**（离线、不在乎实时性），不是为了在线跑算法。
 > 来源：官方文档 Application_case/amr（https://developer.d-robotics.cc/rdk_x_doc/Application_case/amr）
 
-### 交叉编译环境里的 ros1_bridge
+### 4.4.4.7 交叉编译环境里的 ros1_bridge
 
 交叉编译 TROS 时，`ros1_bridge` 会被显式忽略。社区贴出的交叉编译日志里能直接看到：
 
@@ -687,9 +698,9 @@ touch: cannot touch './src/tros/ros1_bridge/COLCON_IGNORE': No such file or dire
 
 **结论**：不要指望在交叉编译 Docker 里构建出能用的 `ros1_bridge`。要用就装 apt 包，或者自己在一台真正的 arm64 Ubuntu 20.04 + 22.04 双环境机器上编。
 
-## 排障四段式
+## 4.4.5 排障四段式
 
-### 故障一：`Hobot_Codec has not received image for more than 5 seconds!`
+### 4.4.5.1 故障一：`Hobot_Codec has not received image for more than 5 seconds!`
 
 **现象**：
 
@@ -715,7 +726,7 @@ ros2 node list                     # hobot_usb_cam 活着吗
 
 **预防**：`hobot_codec` 的这个 5 秒超时报错是**最可靠的链路探针**——它明确告诉你是哪一段断了。看到它先顺着报错里给的话题名往上游走，不要盲改参数。
 
-### 故障二：编码器初始化尺寸不对
+### 4.4.5.2 故障二：编码器初始化尺寸不对
 
 **现象**：编码出来的图像被裁切或有多余填充。
 
@@ -733,7 +744,7 @@ ros2 node list                     # hobot_usb_cam 活着吗
 
 **预防**：设计分辨率时直接用 16 的倍数（640、960、1280、1920 宽度都行；高度用 480、544、720、1088 而不要用 1080）。
 
-### 故障三：多路 RTSP 随机崩溃
+### 4.4.5.3 故障三：多路 RTSP 随机崩溃
 
 **现象**：`component_container_isolated` 报 `exit code -11`，随机发生在某一路上。
 
@@ -753,7 +764,7 @@ ros2 node list                     # hobot_usb_cam 活着吗
 
 **预防**：规划多路方案时，先按「单路解码资源 × 路数 ≤ 硬件上限」估算。1080p@30 的单路 H.265 约占 4K@60 能力的 1/8，理论上 6 路就接近满载，实际还要给 ISP/VSE/编码留余量。保守做法是控制在 3–4 路或降到 15fps。
 
-### 故障四：`ros2: command not found`（桥接终端）
+### 4.4.5.4 故障四：`ros2: command not found`（桥接终端）
 
 **现象**：
 

@@ -1,4 +1,15 @@
-# 模型转换与 hb_mapper
+---
+id: 03-AI推理与工具链-03-模型转换与hb_mapper
+volume: 3
+volume_title: AI 推理与工具链
+title: 模型转换与 hb_mapper
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [hb_mapper, ONNX, opset, yaml, 算子回退]
+summary: OE 工具链 Docker 环境、hb_mapper 三段脚本流程、yaml 逐项配置、ONNX 导出约束（opset 10/11）、算子回退 CPU 的判读。
+source_policy: "official-first, community-verified"
+---
+# 3.3 模型转换与 hb_mapper
 
 ## 本章解决什么
 
@@ -11,9 +22,9 @@
 > 来源：官方文档 Advanced_development/toolchain_development/overview（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/toolchain_development/overview）
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-## 环境：Docker 是唯一被官方支持的转换环境
+## 3.3.1 环境：Docker 是唯一被官方支持的转换环境
 
-### 版本对应关系
+### 3.3.1.1 版本对应关系
 
 X5 的工具链版本是 **V1.2.8**，它对应 RDK X5 系统软件 3.5.0。官方原文：
 
@@ -38,7 +49,7 @@ wget https://d-robotics-aitoolchain.oss-cn-beijing.aliyuncs.com/oe_x5/1.2.8/dock
 
 **不要用 X3 的工具链转 X5 的模型。** X3 是 V2.6.6、X5 是 V1.2.8，版本号完全不同，`march` 也不同（`bernoulli2` vs `bayes-e`）。
 
-### 起容器
+### 3.3.1.2 起容器
 
 社区教程给出的完整启动命令（含挂载）：
 
@@ -61,7 +72,7 @@ docker run -it --rm --gpus all --shm-size=15g \
 
 容器里 `hb_mapper` 有输出，就说明环境装好了。
 
-### 一个官方明确回答过的疑问
+### 3.3.1.3 一个官方明确回答过的疑问
 
 > 「算法工具链的 Docker 镜像是基于 Ubuntu 20.04 制作的，这会影响转换产物（如 .bin 或 .hbm 模型文件）在 RDK 板端 Ubuntu 22.04 系统上运行吗？」
 > 「通常**不会影响**……它生成的模型文件（如 .bin 用于 PTQ，.hbm 用于 QAT）是针对 RDK 板卡上特定 BPU 架构的二进制指令和权重数据。这些模型文件本身与运行它们的 RDK 板卡操作系统的 Ubuntu 版本是解耦的，只要板卡上的 Runtime 库（如 `libdnn.so` 等 BPU 驱动和推理库）与模型转换时使用的工具链版本兼容即可。」
@@ -78,7 +89,7 @@ in order to ensure correct model results, it is recommended to use compilation t
 
 > 来源：官方文档 Basic_Application/pydev_demo_sample/RDK_X5/detection_sample（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/pydev_demo_sample/RDK_X5/detection_sample）
 
-## hb_mapper 的三个子命令
+## 3.3.2 hb_mapper 的三个子命令
 
 `hb_mapper` 不是一个工具，是三个：
 
@@ -88,7 +99,7 @@ in order to ensure correct model results, it is recommended to use compilation t
 | `hb_mapper makertbin` | 完整转换：校准 → 量化 → 编译，产出 `.bin` | 主体步骤 |
 | `hb_mapper debug`（部分版本） | 逐层对比量化误差 | 精度排查时用 |
 
-### checker：先验证再转换
+### 3.3.2.1 checker：先验证再转换
 
 官方命令形式：
 
@@ -130,7 +141,7 @@ grep -i "softmax" checker_log.txt
 
 所以**养成习惯：checker 跑完先 grep 一遍 CPU 和 subgraph**，不要等上板才发现。
 
-### makertbin：两种用法
+### 3.3.2.2 makertbin：两种用法
 
 **用法一：走 yaml 配置**
 
@@ -153,7 +164,7 @@ hb_mapper makertbin --fast-perf \
 
 两者的差别在于：fast-perf 会自动删掉模型首尾不必要的 CPU 算子（Transpose、Cast、Reshape 之类），强制更多算子留在 BPU。代价是**它会改动模型结构**，如果你的后处理严格依赖某个输出节点的 layout，fast-perf 之后可能对不上。生产环境建议先用 yaml 精确控制，fast-perf 用来做性能上限探测。
 
-### 转换产物长什么样
+### 3.3.2.3 转换产物长什么样
 
 `makertbin` 结束后，`working_dir` 下会有一批文件：
 
@@ -203,7 +214,7 @@ model_parameters:
 
 > 来源：社区帖 34983（https://forum.d-robotics.cc/t/topic/34983）
 
-## yaml 逐项拆解
+## 3.3.3 yaml 逐项拆解
 
 yaml 分四组，四组都必须存在，缺一组直接报错。这是社区教程反复强调的：
 
@@ -211,7 +222,7 @@ yaml 分四组，四组都必须存在，缺一组直接报错。这是社区教
 
 > 来源：社区帖 28624（https://forum.d-robotics.cc/t/topic/28624）
 
-### 第一组：model_parameters
+### 3.3.3.1 第一组：model_parameters
 
 ```yaml
 model_parameters:
@@ -285,7 +296,7 @@ WARNING node: { Gemm_128 : None} does not exist, please double check your input
 
 > 来源：社区帖 34578（https://forum.d-robotics.cc/t/topic/34578）
 
-### 第二组：input_parameters
+### 3.3.3.2 第二组：input_parameters
 
 这是四组里最容易配错的一组，直接决定量化的成败。
 
@@ -337,7 +348,7 @@ input_parameters:
 
 所以配了 `scale_value: 0.003921568627451` 之后，**板端喂进去的应该是 0~255 的原始像素值，不是归一化后的 0~1**。这一条是社区最致命的坑，下一节单独讲。
 
-### 第三组：calibration_parameters
+### 3.3.3.3 第三组：calibration_parameters
 
 ```yaml
 calibration_parameters:
@@ -368,7 +379,7 @@ calibration_parameters:
 
 原因是 `preprocess_on` 的 resize 用 skimage，插值方式、配色通道转换都不一定和你的训练预处理一致。校准数据的分布一旦偏了，量化阈值就偏了，精度就掉了 —— 而这个偏差在转换日志里**看不出来**。
 
-### 第四组：compiler_parameters
+### 3.3.3.4 第四组：compiler_parameters
 
 ```yaml
 compiler_parameters:
@@ -409,11 +420,11 @@ input_source: {'input': 'ddr'}
 
 > 来源：社区帖 34084（https://forum.d-robotics.cc/t/topic/34084）
 
-## ONNX 导出：转换失败的源头在这里
+## 3.3.4 ONNX 导出：转换失败的源头在这里
 
 一半以上的 `hb_mapper` 报错，根子不在 `hb_mapper`，在导出的 ONNX 本身。
 
-### 硬约束一：opset 只能是 10 或 11
+### 3.3.4.1 硬约束一：opset 只能是 10 或 11
 
 官方原文：
 
@@ -450,7 +461,7 @@ adapt: Assertion false failed: No Previous Version of LayerNormalization exists
 
 `LayerNormalization` 是 opset 17 才引入的算子，在 opset 11 里根本没有，所以「降到 11」这一步本身就会失败。遇到这种算子，正确做法不是调 opset，而是**在模型定义里把它拆成 `ReduceMean/Sub/Pow/Sqrt/Div`** 这类基础算子 —— 这些在 BPU 支持列表里。
 
-### 硬约束二：输入必须固定 4 维，N=1
+### 3.3.4.2 硬约束二：输入必须固定 4 维，N=1
 
 ```python
 # 正确
@@ -480,7 +491,7 @@ ERROR list index out of range
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-### 硬约束三：输出层不要带解码和 NMS
+### 3.3.4.3 硬约束三：输出层不要带解码和 NMS
 
 官方明确要求「浮点模型中不要包含有后处理算子，例如：nms 计算」。
 
@@ -518,7 +529,7 @@ torch.onnx.export(
 
 > 来源：社区帖 34084（https://forum.d-robotics.cc/t/topic/34084）
 
-### 一个必须做对的细节：NCHW 还是 NHWC
+### 3.3.4.4 一个必须做对的细节：NCHW 还是 NHWC
 
 同样是 YOLO 导出，社区帖 34084 的作者踩过一个坑并留下了明确结论：
 
@@ -538,7 +549,7 @@ torch.onnx.export(
 
 **官方口径与本仓库建议**：官方推荐 NHWC（因为 BPU 内部高效布局是 NHWC），但社区大量跑通的案例是 NCHW。落地时优先跟着**你选的那份 Model Zoo 示例**走，不要混搭。
 
-### 一个可以直接抄的导出模板
+### 3.3.4.5 一个可以直接抄的导出模板
 
 ```python
 import torch, onnx
@@ -568,11 +579,11 @@ print("Softmax 节点:", softmax)                        # 越少越好
 
 > 来源：社区帖 33301（https://forum.d-robotics.cc/t/topic/33301）
 
-## 转换阶段报错速查
+## 3.3.5 转换阶段报错速查
 
 下面按官方 FAQ 的原文顺序整理，报错文本一字未改。
 
-### checker 阶段
+### 3.3.5.1 checker 阶段
 
 | 报错原文 | 根因 | 处置 |
 | --- | --- | --- |
@@ -583,7 +594,7 @@ print("Softmax 节点:", softmax)                        # 越少越好
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-### makertbin 阶段
+### 3.3.5.2 makertbin 阶段
 
 | 报错原文 | 根因 | 处置 |
 | --- | --- | --- |
@@ -613,11 +624,11 @@ print("Softmax 节点:", softmax)                        # 越少越好
 
 也就是说 `run_on_bpu` 不是什么算子都能往 BPU 上塞，只有末端激活、池化、以及 Transpose 组合。这解释了为什么社区里把 `Gather`、`ScatterElements` 强行标 BPU 往往不生效。
 
-## 校准数据：最容易做错的一步
+## 3.3.6 校准数据：最容易做错的一步
 
 转换流程里唯一「错了也不报错」的环节，就是校准数据。
 
-### 尺寸和格式必须与 yaml 严格一致
+### 3.3.6.1 尺寸和格式必须与 yaml 严格一致
 
 社区帖 34084 的作者把这个坑标成「★★★ 最致命」。他的 yaml 配置是：
 
@@ -644,7 +655,7 @@ scale_value: '0.003921568627451'
 
 > 来源：社区帖 34084（https://forum.d-robotics.cc/t/topic/34084）
 
-### 校准数据自检脚本
+### 3.3.6.2 校准数据自检脚本
 
 生成校准数据后必须验证分布，这是唯一能在转换前拦住问题的手段：
 
@@ -667,7 +678,7 @@ print(f"Mean: {data.mean():.1f}")   # 应在 100~140
 
 **判据只有一条：`max` 接近 255 才算对。** `max` 接近 1.0 说明你多做了一次归一化。
 
-### 数量与多样性
+### 3.3.6.3 数量与多样性
 
 官方模板的注释写的是：「图片来源一般是从测试集中选择 100 张图片，并要覆盖典型场景，不要是偏僻场景，如过曝光、饱和、模糊、纯黑、纯白等图片」。
 
@@ -681,7 +692,7 @@ print(f"Mean: {data.mean():.1f}")   # 应在 100~140
 
 > 来源：社区帖 34983（https://forum.d-robotics.cc/t/topic/34983）
 
-### 多输入模型的校准数据
+### 3.3.6.4 多输入模型的校准数据
 
 多输入时 `cal_data_dir` 用分号分隔多个目录，顺序必须与 `input_name` 一致：
 
@@ -702,9 +713,9 @@ created RawImageDirLoader of shape:[1, 4, 6000, 1]
 
 形状对不上的话，报错是 `ERROR cannot reshape array of size xxx into shape xxx`。
 
-## 两个语法陷阱
+## 3.3.7 两个语法陷阱
 
-### run_on_cpu 的写法
+### 3.3.7.1 run_on_cpu 的写法
 
 官方文档（以及多数示例）用的是 `calibration_parameters` 下的 `run_on_cpu`。社区帖 34578 记录了一次完整的失败-修正过程，结论反直觉：
 
@@ -729,7 +740,7 @@ calibration_parameters:
 
 这与官方文档的口径不一致（官方示例里写的是带括号的字典/列表形式）。判断：**这是不同工具链版本对 yaml 解析器的差异**。稳妥做法是先用单个算子不加括号试一次，能识别再加更多；或者直接用 `model_parameters.node_info` 的 `{'ON': 'CPU'}` 形式，那个形式在多个社区帖里都验证可用（见 34824、34885）。
 
-### node_info 的缩进与引号
+### 3.3.7.2 node_info 的缩进与引号
 
 `node_info` 是 yaml 里唯一一个内嵌 JSON 风格的字段，两种写法都有人用：
 
@@ -757,7 +768,7 @@ node_info:
 
 注意 `'ON'` 被 yaml 解析后带了引号 —— 因为 `ON`/`OFF` 在 YAML 1.1 里是布尔值。写的时候**必须给 `ON` 加引号**成 `'ON'`，否则会被解析成 `True`，导致节点配置被静默忽略。
 
-## 一个最小可跑的完整流程
+## 3.3.8 一个最小可跑的完整流程
 
 把上面所有内容压成一份可执行清单：
 

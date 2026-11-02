@@ -1,4 +1,15 @@
-# BPU 与 Model Zoo 总览
+---
+id: 03-AI推理与工具链-01-BPU与ModelZoo总览
+volume: 3
+volume_title: AI 推理与工具链
+title: BPU 与 Model Zoo 总览
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [BPU, ModelZoo, 算力, 单核]
+summary: BPU 架构与 10 TOPS 算力口径（INT8 定点、单核非双核）、支持算子边界、Model Zoo 仓库结构与本版示例目录。
+source_policy: "official-first, community-verified"
+---
+# 3.1 BPU 与 Model Zoo 总览
 
 ## 本章解决什么
 
@@ -10,7 +21,7 @@
 > 来源：官方文档 model_zoo_intro（https://developer.d-robotics.cc/rdk_x_doc/model_zoo_intro）
 > 来源：官方文档 Advanced_development/toolchain_development/overview（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/toolchain_development/overview）
 
-## BPU 是什么：名字、代际与算力
+## 3.1.1 BPU 是什么：名字、代际与算力
 
 BPU 全称 Brain Processing Unit，是 D-Robotics（地瓜机器人）自研的神经网络加速单元。它不是一个通用 GPU，而是一个**只跑定点 INT8 的专用推理核**。
 
@@ -42,7 +53,7 @@ model_parameters:
 
 > 来源：官方文档 RDK（https://developer.d-robotics.cc/rdk_x_doc/RDK）
 
-### 算力口径：10 TOPS 到底在说什么
+### 3.1.1.1 算力口径：10 TOPS 到底在说什么
 
 这是本章最重要的一段。10 TOPS 的含义需要拆成三层：
 
@@ -64,11 +75,11 @@ model_parameters:
 
 这说明：**讨论「性能」时必须先明确是在说 BPU 推理耗时，还是在说端到端帧率。** 这两者可以差 5 倍以上。
 
-## BPU 的硬限制清单
+## 3.1.2 BPU 的硬限制清单
 
 以下限制来自官方文档与社区实测，都是「改代码解决不了、只能改模型结构或接受」的硬边界。
 
-### 输入必须是固定 4 维，N 只能是 1
+### 3.1.2.1 输入必须是固定 4 维，N 只能是 1
 
 官方原文：
 
@@ -86,7 +97,7 @@ ERROR The shape of model input:input is [xxx] which has dimensions of 0. Please 
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-### 只支持 caffe 1.0 与 onnx opset 10/11
+### 3.1.2.2 只支持 caffe 1.0 与 onnx opset 10/11
 
 > 「支持 caffe 1.0 版本的 caffe 浮点模型和 ir_version≤7 、 opset10 、 opset11 版本的 onnx 浮点模型量化成 D-Robotics 支持的定点模型；其他框架训练的浮点模型需要先导出第 1 点要求符合版本的 onnx 浮点模型后，才能进行量化」
 
@@ -100,7 +111,7 @@ ERROR The opset version of the onnx model is n, only model with opset_version 10
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-### 模型里不能带后处理算子
+### 3.1.2.3 模型里不能带后处理算子
 
 > 「浮点模型中不要包含有 **后处理算子**，例如：nms 计算。」
 
@@ -108,7 +119,7 @@ ERROR The opset version of the onnx model is n, only model with opset_version 10
 
 这条限制是社区里一大半「部署上去检测框乱飞」问题的根。YOLO 系列如果直接把 `model.export()` 导出的 ONNX 丢进工具链，DFL 解码和 Sigmoid 会被包含在计算图里，量化效果极差，而且 DFL 里的 Softmax 会被丢到 CPU，把模型切成十几个子图。
 
-### 输出节点数上限 32，算子有 shape 上限
+### 3.1.2.4 输出节点数上限 32，算子有 shape 上限
 
 ```
 ERROR tool limits for max output num is 32
@@ -126,7 +137,7 @@ INFO： Layer `{op_name}` will be executed on CPU
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）
 
-## 算子支持与「不支持」的真实含义
+## 3.1.3 算子支持与「不支持」的真实含义
 
 官方提供了 Caffe 和 ONNX 两套算子支持列表，未列出的算子「因 D-Robotics 处理器 bpu 硬件限制，暂不支持」。
 
@@ -146,7 +157,7 @@ Unsupported op {op_type}
 
 > 来源：社区帖 35444（https://forum.d-robotics.cc/t/topic/35444）
 
-### Softmax 是最特殊的一个
+### 3.1.3.1 Softmax 是最特殊的一个
 
 在 Transformer 类模型里，Softmax 是绕不开的痛点。社区的实测结论是：**Softmax 默认跑在 CPU，且不支持 INT8，只支持 INT16 或 FP32。**
 
@@ -178,7 +189,7 @@ node_info: {
 
 > 来源：社区帖 34983（https://forum.d-robotics.cc/t/topic/34983）
 
-## Model Zoo 是什么
+## 3.1.4 Model Zoo 是什么
 
 官方定义：
 
@@ -190,7 +201,7 @@ node_info: {
 
 > 来源：官方文档 model_zoo_intro（https://developer.d-robotics.cc/rdk_x_doc/model_zoo_intro）
 
-### 仓库里有什么
+### 3.1.4.1 仓库里有什么
 
 社区教程帖 28624 拆解过仓库结构：主页有中英双语 README、图片资源目录 `resource`、`requirement.txt`，主体是 `demo`（部分版本为 `samples`）目录，按 `detect`、`classification`、`Pose` 等任务分类，每个模型文件夹里同时提供：
 
@@ -208,7 +219,7 @@ node_info: {
 
 > 来源：官方文档 FAQ/toolchain（https://developer.d-robotics.cc/rdk_x_doc/FAQ/toolchain）Q12
 
-### 板端预装模型的固定路径
+### 3.1.4.2 板端预装模型的固定路径
 
 RDKOS 3.5.0 的 `/app/pydev_demo/` 示例直接引用 `/opt/hobot/model/x5/basic/` 下的模型，这些是出厂预装的成品 `.bin`：
 
@@ -231,7 +242,7 @@ RDKOS 3.5.0 的 `/app/pydev_demo/` 示例直接引用 `/opt/hobot/model/x5/basic
 
 文件名里的 `bayese` 就是 `bayes-e` 的另一种写法，`nv12` 表示这个模型要求的运行时输入格式。
 
-### 怎么确认一个 bin 的输入输出
+### 3.1.4.3 怎么确认一个 bin 的输入输出
 
 不要靠文件名猜。板端有专门的工具：
 
@@ -255,7 +266,7 @@ Output[2]: tensorLayout: 0 tensorType: 13 validShape:(1, 21, 21, 255, ) alignedS
 
 `tensorLayout: 2` 对应 NHWC，`0` 对应 NCHW；`tensorType: 1` 是 NV12 图像输入，`13` 是 S8，`14` 是 F32。这几个数字是排查「输出类型不对」问题的关键，第四章会详细讲怎么用。
 
-## BPU 的可观测性：sysfs 接口
+## 3.1.5 BPU 的可观测性：sysfs 接口
 
 很多「性能不达预期」的判断靠猜，其实板端直接把 BPU 状态暴露在 sysfs 里。官方给出的路径是 `/sys/devices/system/bpu`：
 
@@ -301,7 +312,7 @@ cat /sys/devices/system/bpu/bpu0/devfreq/devfreq*/cur_freq
 
 这条结论与「X5 的 BPU 算力 10 TOPS」并不矛盾 —— 算力是单核的算力。但它解释了另一件事：为什么多个模型同时跑时 BPU 利用率上不去，因为本质上是时间分片而不是真并行。
 
-## BPU 内存：ION 与保留内存
+## 3.1.6 BPU 内存：ION 与保留内存
 
 模型加载、输入输出 buffer、中间张量都从 ION 内存里分配。官方给出的 X5 保留内存布局里与 BPU 相关的有两块：
 
@@ -322,11 +333,11 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 这解释了一个高频疑问：为什么 `free` 看到的内存明显小于标称值。官方明确说明「保留内存默认情况下总共占用约 1150MB 的内存空间」，「`free` 命令显示的可用内存已经排除了这部分保留内存」。多路 VIO 场景下如果报 `ion_alloc` 错误，原因通常是预留区被吃满，而不是内存条坏了。
 
-## 模型从哪来：三条路径
+## 3.1.7 模型从哪来：三条路径
 
 实际项目里的模型来源只有三种，选错路径会浪费很多时间。
 
-### 路径一：直接用 Model Zoo 的成品 bin
+### 3.1.7.1 路径一：直接用 Model Zoo 的成品 bin
 
 适合：验证链路是否通、跑 demo、做性能基线。
 
@@ -334,7 +345,7 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 > 来源：官方文档 Basic_Application/pydev_demo_sample/RDK_X5/classification_sample（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/pydev_demo_sample/RDK_X5/classification_sample）
 
-### 路径二：拿 Model Zoo 的 yaml 改自己的 ONNX
+### 3.1.7.2 路径二：拿 Model Zoo 的 yaml 改自己的 ONNX
 
 适合：模型结构与官方示例同族（比如都是 YOLOv8 检测）。
 
@@ -354,7 +365,7 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 > 来源：社区帖 34784（https://forum.d-robotics.cc/t/topic/34784）
 
-### 路径三：从零自己写 yaml
+### 3.1.7.3 路径三：从零自己写 yaml
 
 适合：非 YOLO 族、自定义结构、多输入模型。
 
@@ -364,7 +375,7 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 第三章会逐项拆解这些参数。
 
-## 板端示例目录：3.5.0 的样子
+## 3.1.8 板端示例目录：3.5.0 的样子
 
 3.5.0 的 `/app/pydev_demo/` 是按任务编号的固定结构，认准这个结构能省掉很多「文件在哪」的时间：
 
@@ -401,7 +412,7 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 注意这句「软件版本 3.5.0」—— 整个 `pydev_demo` 目录在 3.5.0 被全量重写过，3.4.1 及更早的目录结构完全不同。
 
-### 每个示例的命令行参数是同一套
+### 3.1.8.1 每个示例的命令行参数是同一套
 
 七个示例的参数设计高度统一，只有阈值类参数因任务不同而略有差异：
 
@@ -424,7 +435,7 @@ ION 在 X5 上主要服务四类用户：BPU 子系统、HIFI（DSP）子系统�
 
 `--priority` 和 `--bpu-cores` 这两个参数是 3.5.0 新增的能力，底层对应 `hbm_runtime` 的 `set_scheduling_params()`。在 pyeasy_dnn 时代没有对应接口 —— 这是判断一段示例代码属于哪个年代的一个快速识别点。
 
-### 示例的实际输出长什么样
+### 3.1.8.2 示例的实际输出长什么样
 
 分类示例跑完打印 Top-5：
 
@@ -469,7 +480,7 @@ yolo11n_seg_bayese_640x640_nv12:
 
 `Scheduling Parameters` 那段输出是 3.5.0 独有的 —— 它来自 `model.sched_params`。看到这段输出，就能确定这段日志是在 3.5.0 及以上系统上跑的。
 
-## 一条完整的自检链路
+## 3.1.9 一条完整的自检链路
 
 把前面所有内容串成一个可执行的检查顺序，遇到「模型跑不起来」按这个顺序走，不要跳步：
 

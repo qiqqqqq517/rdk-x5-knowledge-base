@@ -1,4 +1,15 @@
-# CAN、PoE 与 ISP 摄像头调试
+---
+id: 05-进阶驱动与系统-03-CAN-PoE与ISP摄像头调试
+volume: 5
+volume_title: 进阶驱动与系统
+title: CAN、PoE 与 ISP 摄像头调试
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [CAN, TCAN4550, PoE, ISP, sensor适配]
+summary: CAN FD（TCAN4550 SPI 转 CAN）配置与收发、CAN 卡死的驱动缺陷与修复包、PoE 供电、ISP 调试与 sensor 适配三件套。
+source_policy: "official-first, community-verified"
+---
+# 5.3 CAN、PoE 与 ISP 摄像头调试
 
 ## 本章解决什么
 
@@ -8,9 +19,9 @@ X5 上有三块「接上外设之后才发现不懂」的区域：CAN 总线（�
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__can（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/can）、__POE（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/POE）、__V4l2（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/V4l2）
 
-## 一、CAN 与 CAN FD
+## 5.3.1 CAN 与 CAN FD
 
-### 硬件：TCAN4550 与终端电阻
+### 5.3.1.1 硬件：TCAN4550 与终端电阻
 
 X5 板载 **TCAN4550**：带有集成 CAN FD 收发器的 CAN FD 控制器，支持高达 8Mbps 数据速率，符合 ISO11898-1:2015（数据链路层）与 ISO11898-2:2016（物理层）规范。它通过 **SPI 接口**在 CAN 总线和系统处理器之间搭桥，所以本质上是「SPI 转 CAN」，不是 SoC 内置的 CAN 控制器。
 
@@ -34,7 +45,7 @@ X5 板载 **TCAN4550**：带有集成 CAN FD 收发器的 CAN FD 控制器，支
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__can、社区帖 35199（https://forum.d-robotics.cc/t/topic/35199）
 
-### 设备树配置
+### 5.3.1.2 设备树配置
 
 CAN 挂在 SPI5 上：
 
@@ -74,7 +85,7 @@ dtoverlay=dtoverlay_spi5_spidev
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__can、System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）
 
-### can-utils 工具集
+### 5.3.1.3 can-utils 工具集
 
 | 工具 | 用途 | 典型命令 |
 | --- | --- | --- |
@@ -100,7 +111,7 @@ canplayer -I candump.log
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__can
 
-### 回环测试（经典 CAN）
+### 5.3.1.4 回环测试（经典 CAN）
 
 ```bash
 sudo ip link set down can0
@@ -120,7 +131,7 @@ cansend can0 123#1122334455667788
 
 正常情况下发送后会立即收到自己发的帧。回环模式的作用是把收发关在芯片内部，**完全排除外部接线与终端电阻的干扰**，是验证驱动是否正常工作的第一步。
 
-### CAN FD 回环测试
+### 5.3.1.5 CAN FD 回环测试
 
 仲裁段 500K、数据段 2M：
 
@@ -137,7 +148,7 @@ cansend can0 123##300112233445566778899aabbccddeeff
 
 **注意 CAN 与 CAN FD 的帧格式差异**：经典 CAN 用 `#`，CAN FD 用 `##`。写成 `#` 发 FD 数据会被按经典帧解析，长度截断到 8 字节。
 
-### 双设备通信
+### 5.3.1.6 双设备通信
 
 硬件连接：GND 接 GND，L 接 L，H 接 H。两台设备配置相同的位速率：
 
@@ -154,7 +165,7 @@ candump can0 -L
 cansend can0 123#1122334455667788
 ```
 
-### 实战配置：加 restart-ms
+### 5.3.1.7 实战配置：加 restart-ms
 
 社区帖 35199 给的 DJI 电调场景配置值得作为模板，因为它的三个参数各有明确用途：
 
@@ -175,7 +186,7 @@ ip -details link show can0
 
 > 来源：社区帖 35199（https://forum.d-robotics.cc/t/topic/35199）
 
-### CAN 卡死问题：一个必须知道的已知缺陷
+### 5.3.1.8 CAN 卡死问题：一个必须知道的已知缺陷
 
 社区帖 34260 是一个浏览量 955、回复 70 的长帖，标题就是「RDK X5 can 卡死问题」：
 
@@ -202,7 +213,7 @@ sudo reboot
 
 > 来源：社区帖 34260（https://forum.d-robotics.cc/t/topic/34260）、社区帖 35199（https://forum.d-robotics.cc/t/topic/35199）
 
-### SocketCAN 编程
+### 5.3.1.9 SocketCAN 编程
 
 Linux 把 CAN 总线抽象成网络接口，用标准 socket API 就能收发，不需要额外 SDK。
 
@@ -276,9 +287,9 @@ can_id, dlc, _, data = struct.unpack('=IB3x8s', raw)
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__can、社区帖 35199
 
-## 二、PoE 供电
+## 5.3.2 PoE 供电
 
-### X5 在 PoE 系统里的真实角色
+### 5.3.2.1 X5 在 PoE 系统里的真实角色
 
 这是最容易误解的一点。官方原文：
 
@@ -291,7 +302,7 @@ can_id, dlc, _, data = struct.unpack('=IB3x8s', raw)
 
 X5 既不是 PSE 也不是完整的 PD，它是「PD 的前半段 + 后半段的负载」。所以**必须外接一个第三方 PoE Hat（PD 电路）才能工作**，X5 自己不会把线上的 PoE 电压转成 5V。
 
-### 电流路径
+### 5.3.2.2 电流路径
 
 X5 板载的 RJ45 座内置变压器，可以输出 AC 交流电源，接口位于以太网连接器旁边的 **4PIN 针脚**。
 
@@ -304,7 +315,7 @@ X5 板载的 RJ45 座内置变压器，可以输出 AC 交流电源，接口位�
 
 PoE Hat 的核心功能是把输入的 AC 电源转成 DC 电源。**对 X5 而言，要求该 DC 电源为 5V（MAX 5.2V）**。
 
-### 标准选择
+### 5.3.2.3 标准选择
 
 常见 PoE 协议：
 
@@ -317,9 +328,9 @@ PoE Hat 的核心功能是把输入的 AC 电源转成 DC 电源。**对 X5 而�
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__POE（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/POE）、Basic_Application__01_40pin_user_sample__40pin_define（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/40pin_define）
 
-## 三、ISP 与摄像头
+## 5.3.3 ISP 与摄像头
 
-### HBN 框架与四个关键模块
+### 5.3.3.1 HBN 框架与四个关键模块
 
 HBN 框架覆盖 Camera Sensor 采集链路的大部分模块，包括 VIN、ISP、VSE、GDC、N2D。其中 **VIN、ISP、VSE 可以通过 V4L2 接口访问**。
 
@@ -355,7 +366,7 @@ VSE 的硬件能力（X5）：
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__V4l2（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/V4l2）
 
-### 三种工作模式
+### 5.3.3.2 三种工作模式
 
 | 模式 | 说明 | 适用场景 |
 | --- | --- | --- |
@@ -365,7 +376,7 @@ VSE 的硬件能力（X5）：
 
 HBN 常规模式的特点：用户只需调用 HBN 接口完成模块初始化与绑定，vflow 建立并启动后**不需要关心数据帧的传递**，X5 内部会把数据帧由上游传到下游。这是官方推荐的默认路径，也是性能最好的路径（走内部 zero-copy）。
 
-### 切换到 V4L2 模式
+### 5.3.3.3 切换到 V4L2 模式
 
 ```bash
 sudo srpi-config
@@ -390,7 +401,7 @@ lsmod | grep -E "v4l|imx|ov|sc"
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__V4l2
 
-### 设备节点映射表（必须记）
+### 5.3.3.4 设备节点映射表（必须记）
 
 X5 的 V4L2 video 节点数量很多，四路 CSI 各有一套 SIF/ISP/VSE，编号不连续，**必须查表不能猜**：
 
@@ -414,7 +425,7 @@ dot -Tpng media0.dot -o media0.png
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__V4l2
 
-### V4L2 抓图
+### 5.3.3.5 V4L2 抓图
 
 ```bash
 # 1. 查支持的分辨率与编码方式，同时让驱动完成初始化
@@ -458,7 +469,7 @@ sudo make
 ./v4l2 -w 1920 -h 1080 -c 10 -n 2 -o 2 -i ./1080p.yuv
 ```
 
-### V4L2 的两个已知限制
+### 5.3.3.6 V4L2 的两个已知限制
 
 官方明确列出的已知问题，遇到时不要当 bug 查：
 
@@ -469,7 +480,7 @@ sudo make
 
 > 来源：官方文档 Advanced_development__hardware_development__rdk_x5__V4l2
 
-### ISP 系统结构
+### 5.3.3.7 ISP 系统结构
 
 ISP 是整个多媒体链路里最复杂的模块。理解它需要抓住「ISP Firmware 分两部分」这个结构：
 
@@ -488,7 +499,7 @@ Firmware 启动过程中**会优先选择外部 3A 算法**，如果未注册外
 
 在每帧统计数据 Ready 后，ISP Firmware 调用 `proc_func` 回调，传入两个输入参数；`proc_func` 是实际的算法实现，算法计算后填充输出参数；ISP Firmware 把输出参数应用到 Sensor 或 ISP 硬件。
 
-### 3A 算法注册
+### 5.3.3.8 3A 算法注册
 
 AE、AWB、AF 三类的注册方式完全一致，都实现三个回调：
 
@@ -547,7 +558,7 @@ int32_t awb_deinit_func(void *awb_ctx)
 }
 ```
 
-### 算法的输入输出数据契约
+### 5.3.3.9 算法的输入输出数据契约
 
 这张表是开发自定义 3A 算法时最重要的一张，它规定了每个模块能拿到什么、必须给出什么：
 
@@ -561,7 +572,7 @@ int32_t awb_deinit_func(void *awb_ctx)
 
 > 来源：官方文档 Advanced_development__multimedia_development__isp_system（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/multimedia_development/isp_system）
 
-### ISP 的主要处理模块
+### 5.3.3.10 ISP 的主要处理模块
 
 理解每个模块干什么，才能判断调参时该动哪一块：
 
@@ -588,7 +599,7 @@ int32_t awb_deinit_func(void *awb_ctx)
 
 这条「优先模拟增益」是暗光调参的第一原则。同样要提升 2 倍亮度，先加模拟增益、加满了再加数字增益，画质差异会非常明显。
 
-### ISP 调试信息接口
+### 5.3.3.11 ISP 调试信息接口
 
 怀疑链路有问题时，这些节点能直接看到硬件状态：
 
@@ -622,7 +633,7 @@ cat /sys/devices/platform/soc/a4040000.ipu/info/enabled_pipeline
 
 > 来源：官方文档 Advanced_development__multimedia_development__debug_info（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/multimedia_development/debug_info）
 
-### sensor 适配：为什么你的摄像头点不亮
+### 5.3.3.12 sensor 适配：为什么你的摄像头点不亮
 
 社区帖 34950 是一个信息量很高的失败案例，值得完整分析。用户配置树莓派 5 CSI 摄像头 OV5647，系统 `rdk-x5-ubuntu22-preinstalled-desktop-3.4.1-arm64`：
 
@@ -650,7 +661,7 @@ cat /sys/devices/platform/soc/a4040000.ipu/info/enabled_pipeline
 
 > 来源：社区帖 34950（https://forum.d-robotics.cc/t/topic/34950）、社区帖 35791（https://forum.d-robotics.cc/t/topic/35791）
 
-### 摄像头相关的几个现场排查点
+### 5.3.3.13 摄像头相关的几个现场排查点
 
 | 现象 | 优先检查 | 说明 |
 | --- | --- | --- |
@@ -664,7 +675,7 @@ cat /sys/devices/platform/soc/a4040000.ipu/info/enabled_pipeline
 
 > 来源：社区帖 33617（https://forum.d-robotics.cc/t/topic/33617）、官方文档 Basic_Application__vision__RDK_X5__mipi_camera（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/vision/RDK_X5/mipi_camera）
 
-### 多媒体示例的运行前提
+### 5.3.3.14 多媒体示例的运行前提
 
 以下示例涉及 HDMI 显示，**必须先关闭桌面**：
 

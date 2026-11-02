@@ -1,4 +1,15 @@
-# 摄像头：MIPI 与 USB
+---
+id: 02-基础开发-02-摄像头MIPI与USB
+volume: 2
+volume_title: 基础开发
+title: 摄像头：MIPI 与 USB
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [摄像头, MIPI, USB, V4L2, sensor]
+summary: MIPI CSI 双路与 sensor 选型清单、srpi-config 使能、V4L2 用法、USB UVC、摄像头不出图的 L1-L5 分层判据。
+source_policy: "official-first, community-verified"
+---
+# 2.2 摄像头：MIPI 与 USB
 
 ## 本章解决什么
 
@@ -6,9 +17,9 @@ RDK X5 有两路 MIPI CSI 和四个 USB 3.0 Type-A 口，摄像头接入方式�
 
 ---
 
-## 1. 硬件通路与两个 CAM 口
+## 2.2.1 硬件通路与两个 CAM 口
 
-### 1.1 通路结构
+### 2.2.1.1 通路结构
 
 X5 的摄像头采集链路是一串硬件模块，官方术语如下：
 
@@ -36,7 +47,7 @@ VSE 的通道能力（决定你能同时拿几路不同分辨率的图）：
 
 > 来源：官方文档 Advanced_development/hardware_development/rdk_x5/V4l2（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/hardware_development/rdk_x5/V4l2）
 
-### 1.2 CAM0 与 CAM1 的物理区分
+### 2.2.1.2 CAM0 与 CAM1 的物理区分
 
 RDK X5 板上有两路 22PIN MIPI 摄像头接口。官方给出的定位方法：
 
@@ -49,7 +60,7 @@ RDK X5 板上有两路 22PIN MIPI 摄像头接口。官方给出的定位方法�
 
 > 来源：官方文档 Advanced_development/hardware_development/rdk_x5/V4l2、Quick_start/hardware_introduction/rdk_x5（https://developer.d-robotics.cc/rdk_x_doc/Quick_start/hardware_introduction/rdk_x5）、社区帖 35592（https://forum.d-robotics.cc/t/topic/35592）
 
-### 1.3 禁止带电插拔
+### 2.2.1.3 禁止带电插拔
 
 官方 FAQ 明确：**严禁在开发板通电的情况下插拔 MIPI 摄像头**。带电操作极易因瞬间电流冲击或引脚接触顺序错误，导致摄像头模组或板卡 MIPI 接口电路短路损坏。
 
@@ -59,9 +70,9 @@ RDK X5 板上有两路 22PIN MIPI 摄像头接口。官方给出的定位方法�
 
 ---
 
-## 2. 支持的 sensor 与分辨率
+## 2.2.2 支持的 sensor 与分辨率
 
-### 2.1 单目摄像头
+### 2.2.2.1 单目摄像头
 
 官方配件清单里已认证测试的型号：
 
@@ -75,7 +86,7 @@ RDK X5 板上有两路 22PIN MIPI 摄像头接口。官方给出的定位方法�
 | 亚博 | IMX219 摄像头 | IMX219 | 800W | 77° | 同微雪 IMX219 |
 | 第三方 | IMX415 摄像头 | IMX415 | 800W | 123° | 官方标"待测试"，22PIN 无需转接板 |
 
-### 2.2 双目摄像头
+### 2.2.2.2 双目摄像头
 
 | 型号 | 传感器 | 像素 | FOV | 基线 | 分辨率 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -85,7 +96,7 @@ RDK X5 板上有两路 22PIN MIPI 摄像头接口。官方给出的定位方法�
 
 GS130WI 在软件里表现为**两颗 SC132GS**，分别挂在 csi0 与 csi2 上，i2c 地址 0x30 / 0x32，配置文件 `linear_1088x1280_raw10_30fps_1lane.c`。
 
-### 2.3 驱动内部还支持、但未列入配件清单的 sensor
+### 2.2.2.3 驱动内部还支持、但未列入配件清单的 sensor
 
 这一点很有用：跑任何 MIPI 示例时，日志会把驱动遍历的 sensor 列表全部打出来，即使识别失败也会打印 `WARN: Sensor Name: xxx, Expected Chip ID: ..., Actual Chip ID Read: 0x00`。从 X5 实测日志里可以读到驱动内置的 sensor 支持面远大于配件清单：
 
@@ -93,7 +104,7 @@ GS130WI 在软件里表现为**两颗 SC132GS**，分别挂在 csi0 与 csi2 上
 
 **这张表的价值在于反向使用**：如果你的 sensor 型号不在里面，无论怎么接线都不会出图——驱动里没有它的 chip ID 与初始化序列。
 
-### 2.4 版本对 sensor 支持的影响
+### 2.2.2.4 版本对 sensor 支持的影响
 
 | 版本 | 与摄像头相关的变更 |
 | --- | --- |
@@ -108,9 +119,9 @@ GS130WI 在软件里表现为**两颗 SC132GS**，分别挂在 csi0 与 csi2 上
 
 ---
 
-## 3. 在 `srpi-config` 里使能
+## 2.2.3 在 `srpi-config` 里使能
 
-### 3.1 三种采集模式
+### 2.2.3.1 三种采集模式
 
 官方 V4L2 文档把 X5 的相机工作模式分三种，必须选一种：
 
@@ -122,7 +133,7 @@ GS130WI 在软件里表现为**两颗 SC132GS**，分别挂在 csi0 与 csi2 上
 
 HBN 模式下，Camera 是单独一套 API，Camera 之后的 VIN/ISP/VSE/GDC/Codec 都用 vnode 抽象；Camera 与 VIN 通过 attach 接口绑定，vflow 建起来之后用户不用管帧的传递。
 
-### 3.2 配置步骤
+### 2.2.3.2 配置步骤
 
 ```bash
 # 需要 sudo，且必须全屏终端
@@ -139,14 +150,14 @@ sudo srpi-config
 sync && sudo reboot
 ```
 
-### 3.3 确认模式生效
+### 2.2.3.3 确认模式生效
 
 ```bash
 # 看 v4l 相关驱动与 sensor 驱动是否加载
 lsmod | grep -iE "v4l|imx|ov5647|sc132"
 ```
 
-### 3.4 sensor 效果库切换（只针对 IMX219）
+### 2.2.3.4 sensor 效果库切换（只针对 IMX219）
 
 `srpi-config` 有一个 `Sensor Profiles` 菜单，用于切换 IMX219 的效果库：
 
@@ -161,9 +172,9 @@ lsmod | grep -iE "v4l|imx|ov5647|sc132"
 
 ---
 
-## 4. V4L2 用法
+## 2.2.4 V4L2 用法
 
-### 4.1 设备节点映射表
+### 2.2.4.1 设备节点映射表
 
 V4L2 sif-isp-vse 模式生效后，节点是固定的。这张表建议直接抄下来：
 
@@ -176,7 +187,7 @@ V4L2 sif-isp-vse 模式生效后，节点是固定的。这张表建议直接抄
 
 注意 CSI0 的 ISP 是 **video4** 而不是 video1——从 VIN 到 ISP 跳了三个号。这是最容易记错的一处。
 
-### 4.2 查看设备拓扑
+### 2.2.4.2 查看设备拓扑
 
 ```bash
 # 需要 root
@@ -186,7 +197,7 @@ dot -Tpng media0.dot -o media0.png
 
 生成的图展示 `/dev/media0` 的媒体管道结构：传感器、ISP、视频节点、数据流路径。
 
-### 4.3 抓一帧
+### 2.2.4.3 抓一帧
 
 ```bash
 # 1) 列出支持的分辨率与像素格式（同时完成驱动初始化）
@@ -206,7 +217,7 @@ v4l2-ctl -d /dev/video4 \
 
 抓下来的 NV12 用 `yuvplayer` 或 `ffmpeg` 转 PNG 才能看。文件大小应为 `宽 × 高 × 1.5`（NV12 是 Y 全采样 + UV 半采样），尺寸不对说明格式参数没生效。
 
-### 4.4 官方 C 示例
+### 2.2.4.4 官方 C 示例
 
 ```bash
 cd /app/cdev_demo/v4l2/
@@ -232,7 +243,7 @@ sudo make
 ./v4l2 -w 1920 -h 1080 -c 10 -n 2 -o 2 -i ./1080p.yuv
 ```
 
-### 4.5 V4L2 模式的两条已知限制
+### 2.2.4.5 V4L2 模式的两条已知限制
 
 官方在文档末尾直接写了"已知问题"，这两条会直接影响实现方案：
 
@@ -243,9 +254,9 @@ sudo make
 
 ---
 
-## 5. 用 Python / C 采集（HBN 与示例）
+## 2.2.5 用 Python / C 采集（HBN 与示例）
 
-### 5.1 MIPI 示例套件
+### 2.2.5.1 MIPI 示例套件
 
 `/app/pydev_demo/08_mipi_camera_sample` 下有 5 个脚本：
 
@@ -269,7 +280,7 @@ sudo python 02_mipi_camera_dump.py -f 30 -c 10 -w 1920 -h 1080
 sudo systemctl stop lightdm
 ```
 
-### 5.2 分辨率改了会怎样：一个真实故障
+### 2.2.5.2 分辨率改了会怎样：一个真实故障
 
 社区有一个典型案例值得完整复盘，因为它揭示了"改分辨率"这件事的真实成本。
 
@@ -304,7 +315,7 @@ sudo python 02_mipi_camera_dump.py -f 30 -c 1 -w 1920 -h 1080 2>&1 | grep -E "Fo
 
 > 来源：社区帖 35422（https://forum.d-robotics.cc/t/topic/35422）
 
-### 5.3 C 示例：`vio2display` / `vio_capture` / `vio2encoder`
+### 2.2.5.3 C 示例：`vio2display` / `vio_capture` / `vio2encoder`
 
 三个示例同属 `/app/cdev_demo/`，都基于 `libspcdev`，都要先关桌面：
 
@@ -326,9 +337,9 @@ sudo systemctl stop lightdm
 
 ---
 
-## 6. USB 摄像头（UVC）
+## 2.2.6 USB 摄像头（UVC）
 
-### 6.1 设备节点：两个说法并存
+### 2.2.6.1 设备节点：两个说法并存
 
 这是一个必须点明的冲突：
 
@@ -357,7 +368,7 @@ OpenCV 里用 `cv2.VideoCapture(N)`，N 就是这个节点号。
 
 > 来源：官方文档 Basic_Application/vision/RDK_X5/usb_camera（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/vision/RDK_X5/usb_camera）、FAQ/interface
 
-### 6.2 官方示例
+### 2.2.6.2 官方示例
 
 ```bash
 cd /app/pydev_demo/07_usb_camera_sample
@@ -384,7 +395,7 @@ Open USB camera successfully
 
 那条 `Inconsistency ... hbrt library version ... model build version` 是**模型编译版本与运行时版本不一致**的提示，不影响示例运行，但说明模型的编译工具链版本旧于板端运行时。要消除它只能重新编译模型，属于第三卷的范畴。
 
-### 6.3 USB 摄像头不出图的标准排查
+### 2.2.6.3 USB 摄像头不出图的标准排查
 
 按顺序做，前一步不通不要跳到下一步：
 
@@ -409,11 +420,11 @@ v4l2-ctl -d /dev/video0 --set-fmt-video=width=640,height=480,pixelformat=MJPG \
 
 ---
 
-## 7. MIPI 不出图：分层判据
+## 2.2.7 MIPI 不出图：分层判据
 
 这是本章最有价值的部分。社区里最完整的一个案例（GS130WI 双目不出图）历时两周、12 楼回复，最终把问题定位到硬件/接触层，而不是软件。它的价值在于给出了**可复现的判定顺序**。
 
-### 7.1 关键信号：不是"初始化成功"，而是"之后有没有帧"
+### 2.2.7.1 关键信号：不是"初始化成功"，而是"之后有没有帧"
 
 日志出现这两行，都**不代表**出图成功：
 
@@ -443,7 +454,7 @@ ros2 topic hz /image_combine_raw
 
 `grab failed` 持续增加 = 取帧链路断了。**它和 `init success` 同时出现是完全可能的**，两者不在同一层。
 
-### 7.2 分层判据表
+### 2.2.7.2 分层判据表
 
 | 层 | 现象 | 判据 | 处理方向 |
 | --- | --- | --- | --- |
@@ -464,7 +475,7 @@ ros2 topic hz /image_combine_raw
 
 如果只看 `codec 收不到图` 就去调编码参数，方向就错了——那是 L4 的症状。
 
-### 7.3 四组单变量 A/B：把 GDC 与 LPWM 分离
+### 2.2.7.3 四组单变量 A/B：把 GDC 与 LPWM 分离
 
 GS130WI 是双 SC132GS，`lpwm_enable=True` 对应硬件同步，`False` 是软件同步。社区实测者给出的四组对照（每组长跑 ≥ 60 秒，覆盖故障窗口）：
 
@@ -487,7 +498,7 @@ GS130WI 是双 SC132GS，`lpwm_enable=True` 对应硬件同步，`False` 是软�
 
 这说明**"2.5.2 软件栈必然不支持 GS130WI"这个结论是错的**——同版本硬件上能稳定出帧。差异于是收敛到：相机/FFC 接触、板端接口、供电、EEPROM/固件、启动时残留的相机进程。
 
-### 7.4 GDC-off 时的一个陷阱：尺寸必须匹配原生输出
+### 2.2.7.4 GDC-off 时的一个陷阱：尺寸必须匹配原生输出
 
 同一位实测者还给了反例：用 SC230AI 时，**GDC 关闭后如果仍强行用 1088×1280，会立即报**
 
@@ -502,7 +513,7 @@ creat_vse_node ret -10
 
 把 `-10` 和"长时间 `grab failed`"当成同一个根因，是这类排查里最常见的误判。
 
-### 7.5 完整检查清单
+### 2.2.7.5 完整检查清单
 
 ```bash
 # ── L0：环境 ──────────────────────────────
@@ -529,7 +540,7 @@ ros2 topic hz /image_combine_raw
 
 > 来源：社区帖 35592（https://forum.d-robotics.cc/t/topic/35592）
 
-### 7.6 另一个常见误配：OV5647 想要 60 帧
+### 2.2.7.6 另一个常见误配：OV5647 想要 60 帧
 
 **现象**：OV5647 用不上 60fps，`vio2display` 起来后帧率只有 30。
 
@@ -557,7 +568,7 @@ cd /app/cdev_demo/vio2display
 
 ---
 
-## 8. 四段式排障：USB 摄像头画面黑屏
+## 2.2.8 四段式排障：USB 摄像头画面黑屏
 
 **现象**
 

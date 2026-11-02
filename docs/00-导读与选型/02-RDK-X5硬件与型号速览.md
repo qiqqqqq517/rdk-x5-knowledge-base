@@ -1,4 +1,15 @@
-# RDK X5 硬件与型号速览
+---
+id: 00-导读与选型-02-RDK-X5硬件与型号速览
+volume: 0
+volume_title: 导读与选型
+title: RDK X5 硬件与型号速览
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [硬件, 规格, 内存布局, 电源]
+summary: X5 与 X5 Module 的型号差异、芯片规格、14 个接口、电源与 RTC 要求、约 1150MB 保留内存布局、温度传感器。
+source_policy: "official-first, community-verified"
+---
+# 0.2 RDK X5 硬件与型号速览
 
 ## 本章解决什么
 
@@ -7,7 +18,7 @@
 > 来源：官方文档 Quick_start/hardware_introduction/rdk_x5（https://developer.d-robotics.cc/rdk_x_doc/Quick_start/hardware_introduction/rdk_x5）
 > 来源：官方文档 RDK（https://developer.d-robotics.cc/rdk_x_doc/RDK）
 
-## 型号确认：X5 与 X5 Module 不是一回事
+## 0.2.1 型号确认：X5 与 X5 Module 不是一回事
 
 RDK 套件包含四款硬件，本文档只覆盖其中与 X5 相关的两款：
 
@@ -23,7 +34,7 @@ RDK 套件包含四款硬件，本文档只覆盖其中与 X5 相关的两款：
 
 > 来源：官方文档 Quick_start/hardware_introduction/rdk_x5（https://developer.d-robotics.cc/rdk_x_doc/Quick_start/hardware_introduction/rdk_x5）
 
-### 怎么在板子上确认自己是什么型号
+### 0.2.1.1 怎么在板子上确认自己是什么型号
 
 ```bash
 hrut_boardid
@@ -41,7 +52,7 @@ hrut_boardid
 
 **这解释了一个社区高频疑问**：有人 `rdkos_info` 看到的内存明显小于标称容量。这不是坏板，是 **Linux 保留内存**占掉了 —— 见下面「内存布局」一节。
 
-## 芯片规格
+## 0.2.2 芯片规格
 
 | 项目 | 规格 |
 | --- | --- |
@@ -56,7 +67,7 @@ hrut_boardid
 
 **注意算力口径**：10 TOPS 是 BPU 的定点（INT8）推理算力，不是 FP32 算力，也不是 CPU 算力。任何「我的模型跑不到标称帧率」的讨论，都要先把这点对齐 —— 模型里如果有大量算子 fallback 到 CPU，实际性能与 10 TOPS 无关。
 
-## 接口清单
+## 0.2.3 接口清单
 
 RDK X5（单板）正面 14 个接口位：
 
@@ -91,7 +102,7 @@ RDK X5 Module 载板把部分接口做了外围器件转换，这决定了它们
 
 「4 路 USB 共享 Hub 上行带宽」是一条容易被忽略的硬限制：接 4 个高帧率 USB 摄像头时总带宽会打满，表现是掉帧或 `select timeout`，而不是某个摄像头单独坏掉。
 
-## 电源：最容易误判的硬约束
+## 0.2.4 电源：最容易误判的硬约束
 
 | 项目 | 要求 |
 | --- | --- |
@@ -126,7 +137,7 @@ RTC 电池另有独立要求，很多人忽略：
 
 > 来源：官方文档 Quick_start/hardware_introduction/rdk_x5（https://developer.d-robotics.cc/rdk_x_doc/Quick_start/hardware_introduction/rdk_x5）
 
-## 内存布局：为什么可用内存小于标称
+## 0.2.5 内存布局：为什么可用内存小于标称
 
 这是 RDK X5 最容易被误解的一处。Linux 设备树里预留了七段专用内存，**`free` 命令显示的可用内存已经排除了它们**，所以看起来「少了一大块」。
 
@@ -153,7 +164,7 @@ cat /proc/iomem
 free -h
 ```
 
-### ION 内存与三个区域
+### 0.2.5.1 ION 内存与三个区域
 
 ION 是内核里管设备间内存共享的子系统。在 X5 上，ION 内存被四类使用者共享：
 
@@ -174,7 +185,7 @@ X5 主要用三个 ION 区域，分工明确：
 
 调整 ION 区域大小用 `srpi-config`（ION memory 一节）。这是解决「多路摄像头时内存分配失败」的正规手段。
 
-## 温度传感器
+## 0.2.6 温度传感器
 
 X5 有三个温度传感器，分别对应 DDR / BPU / CPU：
 
@@ -192,7 +203,7 @@ CPU / GPU 3D / BPU / DDR 都支持调频，其中 **CPU 支持调压**，其余�
 
 > 来源：官方文档 Advanced_development/linux_development/driver_development_x5/driver_lowpower（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_lowpower）
 
-## 存储与外设
+## 0.2.7 存储与外设
 
 | 项目 | 规格 | 注意 |
 | --- | --- | --- |
@@ -206,7 +217,7 @@ CPU / GPU 3D / BPU / DDR 都支持调频，其中 **CPU 支持调压**，其余�
 
 「未断电插拔 MIPI 摄像头会烧模组」是硬件级红线，不是危言耸听：MIPI CSI 带电插拔会产生瞬态电流冲击，官方明确警告过。
 
-## 默认网络配置
+## 0.2.8 默认网络配置
 
 有线网口默认是**静态 IP**：
 
@@ -226,7 +237,7 @@ ifconfig eth0
 
 这条默认值解释了「网线直连电脑却 ping 不通」的常见现象：电脑网卡不在 `192.168.127.0/24` 网段。要么改电脑网段，要么板端改 IP。
 
-## 官方配件与资料
+## 0.2.9 官方配件与资料
 
 | 资料 | 链接 |
 | --- | --- |
@@ -249,7 +260,7 @@ ifconfig eth0
 
 > 来源：官方文档 Quick_start/accessory（https://developer.d-robotics.cc/rdk_x_doc/Quick_start/accessory）
 
-### MIPI 摄像头选型（官方认证清单摘录）
+### 0.2.9.1 MIPI 摄像头选型（官方认证清单摘录）
 
 | 型号 | 像素 | 默认分辨率 | 最大分辨率 | 备注 |
 | --- | --- | --- | --- | --- |

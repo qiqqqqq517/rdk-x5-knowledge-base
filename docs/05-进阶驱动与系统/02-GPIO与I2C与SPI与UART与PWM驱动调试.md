@@ -1,4 +1,15 @@
-# GPIO 与 I2C / SPI / UART / PWM 驱动调试
+---
+id: 05-进阶驱动与系统-02-GPIO与I2C与SPI与UART与PWM驱动调试
+volume: 5
+volume_title: 进阶驱动与系统
+title: GPIO 与 I2C / SPI / UART / PWM 驱动调试
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [驱动调试, i2c, spi, uart, pwm, pinctrl]
+summary: 五个总线的驱动调试方法、X5 与 X3 的驱动文件与内核配置项差异、pinctrl 与 IO-DOMAIN、引脚复用冲突定位。
+source_policy: "official-first, community-verified"
+---
+# 5.2 GPIO 与 I2C / SPI / UART / PWM 驱动调试
 
 ## 本章解决什么
 
@@ -10,7 +21,7 @@
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_gpio_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_gpio_dev）
 
-## X5 的引脚资源与 40PIN 现状
+## 5.2.1 X5 的引脚资源与 40PIN 现状
 
 先把资源盘清楚，后面的所有讨论都建立在这组数字上：
 
@@ -37,7 +48,7 @@ IO 电压全部为 3.3V，最大耐压 3.46V。3.3V 最大输出 800mA、5V 最�
 
 > 来源：官方文档 Basic_Application__01_40pin_user_sample__40pin_define（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/40pin_define）、__i2c（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/i2c）、__spi、__uart、__pwm
 
-## 引脚复用：X5 上最高频的失败原因
+## 5.2.2 引脚复用：X5 上最高频的失败原因
 
 X5 的 40PIN 并不是「每个脚都能当任何功能用」。有若干组功能共享同一批物理引脚，**同一时刻只能生效一个**：
 
@@ -74,7 +85,7 @@ dtparam=i2c5=on
 
 > 来源：官方文档 System_configuration__srpi-config（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/srpi-config）、System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）、Basic_Application__01_40pin_user_sample__40pin_define
 
-### 一个真实的复用排查案例
+### 5.2.2.1 一个真实的复用排查案例
 
 社区帖 35246 里用户问「怎么把 I2C5 关掉、复用成 uart3」。这个问题本身说明了一件事：**用户以为这是两个独立开关，实际上是一组互斥项**。正确操作是进 `srpi-config` 的 Peripheral bus config，把 `i2c5` 关掉、`uart3` 打开（或者反过来），重启后生效，而不是去找「关闭 i2c5 的单独命令」。
 
@@ -97,9 +108,9 @@ sudo i2cdetect -y -r 5           # -r 用读模式探测，避免误写；显示
 
 > 来源：社区帖 35246（https://forum.d-robotics.cc/t/topic/35246）、社区帖 35816（https://forum.d-robotics.cc/t/topic/35816）
 
-## GPIO 调试
+## 5.2.3 GPIO 调试
 
-### 用户空间控制（sysfs）
+### 5.2.3.1 用户空间控制（sysfs）
 
 X5 使用的 Linux 6.1 基线中，GPIO 的 sysfs 节点已被 Linux 标记为 **Obsolete**，但仍然可用。
 
@@ -128,7 +139,7 @@ echo 356 | sudo tee /sys/class/gpio/unexport
 
 **注意**：`echo 356 > export` 在某些 shell 下会因为权限提示 `Permission denied`——重定向是 shell 在做，不是 echo 在做，所以必须用 `sudo tee`，或者先 `sudo su`。
 
-### GPIO 编号怎么来的
+### 5.2.3.2 GPIO 编号怎么来的
 
 这是 X5 上最容易搞错的一点。**Linux 内的 GPIO 序号是纯软件概念，会随软件改变而变化，与芯片 Pin 脚没有物理绑定关系**。所以不要记数字，用工具查：
 
@@ -153,7 +164,7 @@ line 13: unnamed output LSIO_UART4_TX 392 lsio_gpio0_13_rdk_v1p0
 
 `PinFunc` 显示 `Default` 时要小心：这表示设备树没用这个复用功能，但**不代表它是空闲的**，要去查 pinlist 里该脚的默认功能是什么。
 
-### 内核空间 GPIO 接口
+### 5.2.3.3 内核空间 GPIO 接口
 
 ```c
 /* include/linux/gpio.h */
@@ -168,7 +179,7 @@ int gpio_to_irq(unsigned int gpio);                       /* 申请中断，返�
 
 X5 的 GPIO 控制器支持上升沿/下降沿/高电平/低电平作为中断触发条件，每个作为中断的 GPIO 触发条件可独立配置。驱动源码在 `kernel/drivers/gpio/gpio-dwapb.c`，内核配置项 `GPIO_DWAPB`。
 
-### debugfs 看 GPIO 申请情况
+### 5.2.3.4 debugfs 看 GPIO 申请情况
 
 ```bash
 mount | grep debugfs
@@ -192,9 +203,9 @@ gpio-503 ( |id ) in hi IRQ
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_gpio_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_gpio_dev）、Basic_Application__01_40pin_user_sample__gpio（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/gpio）
 
-## I2C 调试
+## 5.2.4 I2C 调试
 
-### 硬件能力
+### 5.2.4.1 硬件能力
 
 | 能力 | X5 规格 |
 | --- | --- |
@@ -221,7 +232,7 @@ CONFIG_I2C_DESIGNWARE_PLATFORM=y           # DW I2C 驱动
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_i2c_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_i2c_dev）
 
-### 调整 I2C 速率
+### 5.2.4.2 调整 I2C 速率
 
 默认 100K。改速率要在板级 dts 的对应 i2c 节点里改 `clock-frequency` 与两个 falling-time 参数。
 
@@ -267,7 +278,7 @@ CONFIG_I2C_DESIGNWARE_PLATFORM=y           # DW I2C 驱动
 
 **改完要重新编译 dtb 并烧录/替换**（见第 1 章），改完不重启也不会生效。
 
-### I2C DMA 与握手号
+### 5.2.4.3 I2C DMA 与握手号
 
 ```dts
 &i2c4 {
@@ -294,7 +305,7 @@ I2C DMA 握手号（X5 专用，X3 没有这张表）：
 
 I2C7 位于 DSP 子系统，dts 内 dma 必须绑定 DSP 子系统的 DMA，不能绑 LSIO 的。
 
-### 用户态工具
+### 5.2.4.4 用户态工具
 
 `i2c-tools` 已包含在 X5 rootfs 中：
 
@@ -323,9 +334,9 @@ sudo i2cset -y 5 0x40 0x00 0x12
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_i2c_dev、Basic_Application__01_40pin_user_sample__i2c
 
-## SPI 调试
+## 5.2.5 SPI 调试
 
-### 硬件能力与限制
+### 5.2.5.1 硬件能力与限制
 
 X5 使用新思（Synopsys）设计 ware SSI 控制器，驱动代码：
 
@@ -381,7 +392,7 @@ SPI DMA 握手号：
 
 SPI6 绑定时需指定 `dsp_axi_dma`。
 
-### spidev 设备节点
+### 5.2.5.2 spidev 设备节点
 
 确认 `CONFIG_SPI_SPIDEV=m` 后，还需要在 dts 里创建 dummy 设备节点才会出现 `/dev/spidev*`：
 
@@ -408,7 +419,7 @@ dtoverlay=dtoverlay_spi5_spidev
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_spi_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_spi_dev）、System_configuration__config_txt（https://developer.d-robotics.cc/rdk_x_doc/System_configuration/config_txt）
 
-### 内部回环与外部回环测试
+### 5.2.5.3 内部回环与外部回环测试
 
 **内部回环**（仅 SPI Controller 支持，原理是 tx fifo 直连 rx fifo）：
 
@@ -492,9 +503,9 @@ cat /sys/kernel/debug/pinctrl/34180000.lsio_iomuxc/pinmux-pins | grep spi
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_spi_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_spi_dev）
 
-## UART 调试
+## 5.2.6 UART 调试
 
-### 硬件能力
+### 5.2.6.1 硬件能力
 
 X5 有 8 路串口 UART0~UART7：
 
@@ -518,7 +529,7 @@ drivers/tty/serial/8250/8250_dwlib.h
 
 X3 用的是 `drivers/tty/serial/hobot_serial.c` 与 `CONFIG_SERIAL_HOBOT_UART`，且只有 4 路串口、仅 UART1 支持流控。两套完全不同的驱动。
 
-### 使能串口
+### 5.2.6.2 使能串口
 
 在板级 dts 里改 `status = "okay"`。以 `x5-rdk-v1p0.dts` 使能 uart0、uart2、uart5 为例：
 
@@ -540,7 +551,7 @@ X3 用的是 `drivers/tty/serial/hobot_serial.c` 与 `CONFIG_SERIAL_HOBOT_UART`�
 };
 ```
 
-### DMA 绑定的两个硬约束
+### 5.2.6.3 DMA 绑定的两个硬约束
 
 ```dts
 &uart7 {
@@ -573,7 +584,7 @@ UART DMA 握手号：
 | UART6 | 37 | 38 |
 | UART7 | 0 | 1 |
 
-### 回环测试
+### 5.2.6.4 回环测试
 
 硬件上把 UART1 的 TX 和 RX 短接（对应 40PIN 的 8、10 脚），然后：
 
@@ -611,7 +622,7 @@ ser.close()
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_uart_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_uart_dev）、Basic_Application__01_40pin_user_sample__uart（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/uart）、社区帖 35761（https://forum.d-robotics.cc/t/topic/35761）
 
-### 用 stty 做现场快速排查
+### 5.2.6.5 用 stty 做现场快速排查
 
 `stty` 是不需要写代码就能验证串口参数是否生效的工具：
 
@@ -631,9 +642,9 @@ sudo cat /dev/ttyS1 | hexdump -C
 
 `raw` 这个选项非常关键。默认的 canonical 模式会缓冲到换行才送出，还会把 `0x0D`/`0x0A` 做转换——如果你接的是二进制协议设备，忘记 `raw` 就会出现「明明发了但对面收到的字节不对」。
 
-## PWM 调试
+## 5.2.7 PWM 调试
 
-### 硬件能力（X5 与 X3 差异极大）
+### 5.2.7.1 硬件能力（X5 与 X3 差异极大）
 
 X5 有两类 PWM 控制器：
 
@@ -663,7 +674,7 @@ CONFIG_HOBOT_LPWM=m
 CONFIG_PWM_DROBOT=y
 ```
 
-### 使能 PWM
+### 5.2.7.2 使能 PWM
 
 在板级 dts 里使能。以 `x5-rdk-v1p0.dts` 使能 lpwm1_0/1_1 与 pwm0~pwm3 的全部通道为例：
 
@@ -703,7 +714,7 @@ CONFIG_PWM_DROBOT=y
 
 X5 默认只使能 PWM3。其他组要用 `srpi-config` 打开（`3 Interface Options -> I3 Peripheral bus config`，选对应 pwm 组切到 okay），或改 dts，**重启后生效**。
 
-### 40PIN 引脚与 pwmchip 对应关系
+### 5.2.7.3 40PIN 引脚与 pwmchip 对应关系
 
 这张表是 PWM 调试的必备查询表。**pwm 引脚序号、pwmchip 序号、srpi-config 里的序号三者不是一回事**，混用必然调错通道。
 
@@ -763,7 +774,7 @@ line 10: unnamed input LSIO_I2C1_SDA 357 pinctrl_pwm3_1
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_pwm（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_pwm）、Basic_Application__01_40pin_user_sample__pwm（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/01_40pin_user_sample/pwm）
 
-### PWM 输出与寄存器验证
+### 5.2.7.4 PWM 输出与寄存器验证
 
 以验证 PWM0 通道 0 为例：
 
@@ -808,7 +819,7 @@ sudo devmem 0x34170008 32 0x1000100
 
 **写寄存器前先读出来、只改需要的 bit 再写回**。整体覆写会把驱动正在维护的其他位一起冲掉。
 
-### 为什么 `echo 1 > enable` 会报 `Invalid argument`
+### 5.2.7.5 为什么 `echo 1 > enable` 会报 `Invalid argument`
 
 社区帖 32869 里用户报：`/sys/class/pwm/pwmchip0/pwm0` 目录下的 `enable` 文件写入 `echo 1 > enable` 输出 `Invalid argument`。社区回复（@CauchyKesai）说得很准确：
 
@@ -818,7 +829,7 @@ sudo devmem 0x34170008 32 0x1000100
 
 同一帖里用户还提到「WiringPi 显示 X5 不支持 PWM」，社区给的答复是——官方推荐的方法就是操作 `/sys/class/pwm/`，且需要 root 权限。
 
-### hobot.gpio 能不能输出 PWM
+### 5.2.7.6 hobot.gpio 能不能输出 PWM
 
 社区帖 35351 里用户问「为什么 RDK X5 调用 hobot.gpio 无输出 PWM，只能用 Linux 原生 sysfs pwm 库」。社区给出的结论是：
 
@@ -848,7 +859,7 @@ p.start(val)
 
 > 来源：社区帖 32869（https://forum.d-robotics.cc/t/topic/32869）、社区帖 35351（https://forum.d-robotics.cc/t/topic/35351）、官方文档 Basic_Application__01_40pin_user_sample__pwm
 
-## pinctrl：引脚复用的统一配置层
+## 5.2.8 pinctrl：引脚复用的统一配置层
 
 X5 的 Pinctrl 使用自研驱动，**主要通过配置 DTS 实现功能**，不需要在代码里硬编码寄存器。
 
@@ -866,7 +877,7 @@ kernel/drivers/pinctrl/hobot/common.h
 
 内核配置项 `CONFIG_PINCTRL_SINGLE`（X3 也是这个，但两边驱动文件完全不同）。
 
-### 配置组的结构
+### 5.2.8.1 配置组的结构
 
 驱动在 probe 时会把 `"default"` 对应的那组 pinctrl 配置写进寄存器；其他组需要在代码里解析出来再切换。以 uart2 为例：
 
@@ -897,7 +908,7 @@ lsio_gpio0_8: lsio_gpio0_8 {
 };
 ```
 
-### `horizon,pins` 的五列含义
+### 5.2.8.2 `horizon,pins` 的五列含义
 
 每个 Pin 的配置包含 5 列，理解这五列是能手写 pinctrl 组的前提：
 
@@ -909,7 +920,7 @@ lsio_gpio0_8: lsio_gpio0_8 {
 | 第 4 列 | 对应功能的 Pin-mux 值 | 同上 |
 | 第 5 列 | 上电默认状态、驱动能力、上下拉、施密特触发、电压域 | 见下方各节 |
 
-### Pin-mux 值
+### 5.2.8.3 Pin-mux 值
 
 X5 每个引脚最多支持 4 种功能：
 
@@ -923,7 +934,7 @@ X5 每个引脚最多支持 4 种功能：
 
 查法举例：`LSIO_UART7_RX` 的 mux 配为 0（`MUX_ALT0`）时是 uart rx；配为 `MUX_ALT2` 时是 gpio。
 
-### 驱动强度、上下拉、施密特、电压域
+### 5.2.8.4 驱动强度、上下拉、施密特、电压域
 
 ```dts
 pconf_drv_pu_mid_3v3: pconf-dev-pu-mid-3v3 {
@@ -956,7 +967,7 @@ input-schmitt-enable;
 
 **驱动强度配置过大可能导致芯片管脚损坏**。X5 的引脚分 GPIO 型和 SDIO 型两类，同样 bit 值在两类引脚上表示的驱动电流不一致，具体对照要查官方表格。这是少数「配错了会烧硬件」的配置项，不要靠试。
 
-### debugfs 查看 pinctrl 实际状态
+### 5.2.8.5 debugfs 查看 pinctrl 实际状态
 
 ```bash
 mount | grep debugfs || sudo mount -t debugfs none /sys/kernel/debug
@@ -982,7 +993,7 @@ pin 10 (lsio_uart3_rx): 341c0000.i2c (GPIO UNCLAIMED) function lsio_iomuxc group
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_pinctrl_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_pinctrl_dev）
 
-### 在驱动里使用 pinctrl
+### 5.2.8.6 在驱动里使用 pinctrl
 
 ```c
 static int hobot_xxx_probe(struct platform_device *pdev)
@@ -1011,7 +1022,7 @@ int xxxx_pinmux_select(void)
 }
 ```
 
-## IO-DOMAIN：电压域配置
+## 5.2.9 IO-DOMAIN：电压域配置
 
 IO-Domain 用来配置 X5 部分模块的电压域。以 RGMII 为例，电路上外接 3.3V 就要配 3.3V，外接 1.8V 就要配 1.8V。
 
@@ -1033,7 +1044,7 @@ include/linux/platform_data/pinctrl-single.h
 
 IO-Domain 在 pinctrl-single 框架下实现，因此 DTS 写法和 pinctrl 类似。`pinmux-func.dtsi` 里已经列出了所有模块 1.8V 和 3.3V 的配置组，**一般不需要新增，选择使用即可**。
 
-### SD 与 SDIO 的特殊处理
+### 5.2.9.1 SD 与 SDIO 的特殊处理
 
 这两组 IO-Domain 比较特殊：芯片 PAD 上 SD 与 SDIO 的电压域会被**同时配置**。所以默认改用 SD 及 SDIO 的 MMC 控制器来独立控制它们的 PIN 电压域，配置选项为自定义的 `power-source` 宏：
 
@@ -1059,7 +1070,7 @@ pinctrl_sdio: sdiogrp {
 };
 ```
 
-### 定义一个板级特有的电压域配置
+### 5.2.9.2 定义一个板级特有的电压域配置
 
 以把 pwm0 ch1 配成 1.8V 为例，先在 dts 里定义配置组：
 
@@ -1098,17 +1109,17 @@ if (g_xxx_dev->pins_voltage) {
 }
 ```
 
-### uboot 下也要配电压域
+### 5.2.9.3 uboot 下也要配电压域
 
 X5 的 Uboot 内已实现 Pinctrl 驱动，使用方法与内核一致，均通过 DTS 定义 Pin 属性。所以**改电压域要同时确认 uboot 阶段的配置**——如果 uboot 里配的是 3.3V 而内核配 1.8V，启动早期这段时间引脚就在错误电压域下工作。
 
 > 来源：官方文档 Advanced_development__linux_development__driver_development_x5__driver_io_domain_dev（https://developer.d-robotics.cc/rdk_x_doc/Advanced_development/linux_development/driver_development_x5/driver_io_domain_dev）
 
-## 用 devmem 直接查引脚寄存器
+## 5.2.10 用 devmem 直接查引脚寄存器
 
 当 dts 和 sysfs 都看不出问题时，最后一招是读寄存器。官方给的完整查询范例是 `LSIO_UART3_RXD`：
 
-### 定位复用寄存器
+### 5.2.10.1 定位复用寄存器
 
 1. 打开《X5 PIN SW Reg-V1.1.xlsx》，选 `PIN Mux List` 表；
 2. B 列 `PinName` 找到 `LSIO_UART3_RXD` 行，F 列是默认 function，为 `LSIO_GPIO0_PIN10`；
@@ -1116,7 +1127,7 @@ X5 的 Uboot 内已实现 Pinctrl 驱动，使用方法与内核一致，均通�
 4. A 列是偏移，G 列是功能描述。在 G 列找 `lsio_uart3_rxd PIN mux selector`，偏移为 **`0x84`**；
 5. 完整地址 = 基地址 + 偏移 = `0x34180000 + 0x84` = **`0x34180084`**。
 
-### 写入功能值
+### 5.2.10.2 写入功能值
 
 `Function[x]` 表示要配成该功能需在对应 bit 写入 `[x]`：
 
@@ -1135,7 +1146,7 @@ devmem 0x34180084 32
 sudo devmem 0x34180084 32 0x00200000
 ```
 
-### 定位属性寄存器
+### 5.2.10.3 定位属性寄存器
 
 在 `LSIO PIN Control Register` 表 G 列找 `lsio_uart3_rxd pull up enable`，PU/PD/施密特/驱动力寄存器的偏移为 **`0x3C`**，完整地址 `0x3418003C`。
 
@@ -1143,7 +1154,7 @@ sudo devmem 0x34180084 32 0x00200000
 
 **配置寄存器时，建议先把值读出来，只修改所需 bit 后再写回。**
 
-### GPIO 数据与方向寄存器
+### 5.2.10.4 GPIO 数据与方向寄存器
 
 在 `DW_apb_gpio8_mem_map_v1.0` 和 `DW_apb_gpio32_mem_map_v1.0` 两个表里查引脚的 GPIO 方向寄存器和数值寄存器。
 

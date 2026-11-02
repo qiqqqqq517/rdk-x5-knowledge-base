@@ -1,4 +1,15 @@
-# 显示：HDMI 与 MIPI-DSI
+---
+id: 02-基础开发-03-显示HDMI与MIPI-DSI
+volume: 2
+volume_title: 基础开发
+title: 显示：HDMI 与 MIPI-DSI
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [显示, HDMI, MIPI DSI, 触摸屏, overlay]
+summary: HDMI 分辨率与时序、MIPI DSI 屏适配清单、触摸坐标问题、DSI 与 HDMI 双 ignore 文件互斥机制。
+source_policy: "official-first, community-verified"
+---
+# 2.3 显示：HDMI 与 MIPI-DSI
 
 ## 本章解决什么
 
@@ -6,16 +17,16 @@ RDK X5 有 HDMI 与 MIPI DSI 两条显示通路，**两者互斥，不能同时�
 
 ---
 
-## 1. 通路约束：HDMI 与 DSI 互斥
+## 2.3.1 通路约束：HDMI 与 DSI 互斥
 
-### 1.1 官方明确的两条限制
+### 2.3.1.1 官方明确的两条限制
 
 - RDK X5 支持 HDMI 和 MIPI DSI 两种显示输出方式，**不能同时使用**，系统默认采用 HDMI 输出；
 - HDMI 接口支持的最大分辨率为 **1080P60**。
 
 DSI 接口是 22PIN 排针，需要专用排线（官方用 DSI-Cable-12cm）。这条"互斥"不是软件限制，是硬件设计——社区的 DSI 适配记录里也独立确认了同一点。
 
-### 1.2 互斥的实现机制
+### 2.3.1.2 互斥的实现机制
 
 互斥靠一对 `xorg.conf.d` 配置文件互斥实现，文件名里带 `ignore`：
 
@@ -51,7 +62,7 @@ sudo mv /etc/X11/xorg.conf.d/xorg_hdmi_ignore.conf.disable \
 
 ---
 
-## 2. `srpi-config` 里的显示选项
+## 2.3.2 `srpi-config` 里的显示选项
 
 官方 `srpi-config` 的 `Display Options` 菜单下有三个与显示直接相关的项：
 
@@ -72,7 +83,7 @@ sudo mv /etc/X11/xorg.conf.d/xorg_hdmi_ignore.conf.disable \
 sudo srpi-config
 ```
 
-### 2.1 老版本没有 `D3 MIPI LCD Choice` 怎么办
+### 2.3.2.1 老版本没有 `D3 MIPI LCD Choice` 怎么办
 
 两条路：
 
@@ -92,9 +103,9 @@ dtoverlay=dsi-waveshare-panel-overlay-2_8_inch
 
 ---
 
-## 3. HDMI
+## 2.3.3 HDMI
 
-### 3.1 默认分辨率
+### 2.3.3.1 默认分辨率
 
 Desktop 版的默认分辨率由 `/etc/X11/xorg.conf.d/1-resolution.conf` 控制，官方给出的模板是 1280x720：
 
@@ -113,7 +124,7 @@ EndSection
 
 把 `Modes` 改成想要的分辨率即可。**注意**：官方文档里这个文件在部分系统上是以 `.disable` 后缀存在的（如 `1-resolution.conf.disable`），不生效。要它生效必须去掉 `.disable`。
 
-### 3.2 HDMI 时序优化（版本差异）
+### 2.3.3.2 HDMI 时序优化（版本差异）
 
 3.5.0 版本发布说明里明确列了一条：
 
@@ -125,7 +136,7 @@ EndSection
 
 这意味着：**如果你在 3.3.x 及更早版本上遇到 HDMI 不识别某款显示器，很可能在 3.4.1/3.5.0 上就好了**。判断"是硬件坏了还是系统旧了"的手段就是先升级系统再看。
 
-### 3.3 非标准分辨率的显示器：一个完整案例
+### 2.3.3.3 非标准分辨率的显示器：一个完整案例
 
 社区有一个典型场景：ADKEFOX 1280x800@60 屏接 X5 无信号，而在 PC 上正常。
 
@@ -196,7 +207,7 @@ sudo cp /etc/X11/xorg.conf.d/1-resolution.conf /etc/X11/xorg.conf.d/1-resolution
 
 > 来源：社区帖 34076（https://forum.d-robotics.cc/t/topic/34076）、官方文档 Release_Note/release_note（https://developer.d-robotics.cc/rdk_x_doc/Release_Note/release_note）
 
-### 3.4 验证 HDMI 是否真的连上
+### 2.3.3.4 验证 HDMI 是否真的连上
 
 ```bash
 # 1) DRM 侧看连接器状态
@@ -220,9 +231,9 @@ sudo grep -i error /var/log/Xorg.0.log
 
 ---
 
-## 4. MIPI DSI 屏
+## 2.3.4 MIPI DSI 屏
 
-### 4.1 已适配的型号与 `dtoverlay` 参数
+### 2.3.4.1 已适配的型号与 `dtoverlay` 参数
 
 官方已适配 10 款微雪 DSI 屏。`srpi-config` 菜单路径统一是 `2 Display Options` → `D3 MIPI LCD Choice`，选完重启。
 
@@ -244,7 +255,7 @@ sudo grep -i error /var/log/Xorg.0.log
 
 **判断依据**：`dtoverlay` 的实际值以 `/boot/overlays/` 目录下的文件名和 `srpi-config` 菜单显示为准。11.9 寸是 3.4.1 才新增的适配，老系统上既没有菜单项也没有对应的 `.dtbo`。
 
-### 4.2 各屏的供电与接线差异
+### 2.3.4.2 各屏的供电与接线差异
 
 这是最容易漏的一步：**不同尺寸的 DSI 屏供电方式不同**，不是插上排线就完事。
 
@@ -259,7 +270,7 @@ sudo grep -i error /var/log/Xorg.0.log
 
 排线安装还有一个细节：**用接口的卡扣把没有触点的背面压紧**。这句话在官方每个屏的接线说明里都出现，说明压反/压不紧是常见操作失误。
 
-### 4.3 非官方屏的适配（以 DFRobot 5 寸为例）
+### 2.3.4.3 非官方屏的适配（以 DFRobot 5 寸为例）
 
 官方列表里没有 5 寸。社区有完整的从零适配记录，流程可复用：
 
@@ -295,7 +306,7 @@ DFRobot DFR0550-V1 用的驱动 IC 是 ILI9881C，但其初始化时序与内核
 
 > 来源：社区帖 34342（https://forum.d-robotics.cc/t/topic/34342）
 
-### 4.4 触摸配置
+### 2.3.4.4 触摸配置
 
 DSI 屏的触摸有两种接入方式，配置位置完全不同：
 
@@ -356,7 +367,7 @@ onboard
 
 > 来源：社区帖 35211（https://forum.d-robotics.cc/t/topic/35211）、35479（https://forum.d-robotics.cc/t/topic/35479）
 
-### 4.5 背光
+### 2.3.4.5 背光
 
 背光有两种归属：
 
@@ -393,7 +404,7 @@ sudo systemctl enable --now backlight.service
 
 > 来源：社区帖 35211（https://forum.d-robotics.cc/t/topic/35211）
 
-### 4.6 触摸屏供电不足的表现
+### 2.3.4.6 触摸屏供电不足的表现
 
 社区对 HDMI 触控屏有一条经验值得记下来：**屏幕在不断"有背光/无背光"之间切换闪烁，且不显示"无信号"**，这个现象优先怀疑供电不足，而不是分辨率不匹配。判据是——拔掉 HDMI 线后屏幕应该显示"无信号"，如果仍然闪烁，说明屏的 MCU 在掉电重启，与信号无关。
 
@@ -403,9 +414,9 @@ sudo systemctl enable --now backlight.service
 
 ---
 
-## 5. 多媒体示例的显示前提：先关桌面
+## 2.3.5 多媒体示例的显示前提：先关桌面
 
-### 5.1 规则本身
+### 2.3.5.1 规则本身
 
 **在 Desktop 版系统上，所有"直出 HDMI"的示例都必须先停掉 `lightdm`。**
 
@@ -416,7 +427,7 @@ sudo systemctl stop lightdm
 
 原因：这些示例走 DRM/KMS 直接渲染（打开 `/dev/dri/card0`），与 X 桌面争抢同一套显示资源。桌面占着，示例能跑、能打印日志、甚至能算完推理，但屏幕上什么都不显示。
 
-### 5.2 哪些示例需要这一步
+### 2.3.5.2 哪些示例需要这一步
 
 官方在不同章节反复写了这条，说明是共性要求：
 
@@ -437,7 +448,7 @@ sudo systemctl stop lightdm
 sudo systemctl start lightdm
 ```
 
-### 5.3 不关桌面会怎样：完整案例
+### 2.3.5.3 不关桌面会怎样：完整案例
 
 **现象**：Desktop 版系统运行 USB 摄像头示例 `usb_camera_fcos.py`，日志显示 USB 摄像头打开成功、能识别到物体，但实时显示窗口一直黑屏。
 
@@ -459,15 +470,15 @@ sudo python usb_camera_yolov5x.py
 
 ---
 
-## 6. 双屏：哪些组合真的能同时用
+## 2.3.6 双屏：哪些组合真的能同时用
 
 "双屏"在 X5 上要看具体是哪两块屏，答案完全不同。
 
-### 6.1 HDMI + MIPI DSI：不能
+### 2.3.6.1 HDMI + MIPI DSI：不能
 
 这是本章开头就写死的硬件约束。两条通路在 X5 上互斥，`srpi-config` 的 `Display Chose DSI or HDMI` 只能二选一，底层靠两个 `xorg_*_ignore.conf` 互斥实现。**不要在项目规划阶段假设可以"HDMI 接大屏做监控 + DSI 做本地操作面板"**。
 
-### 6.2 HDMI + SPI LCD：可以
+### 2.3.6.2 HDMI + SPI LCD：可以
 
 SPI 屏走的是完全不同的驱动栈（`panel-mipi-dbi` + `drm_mipi_dbi`），不占用 DSI 控制器，因此可以与 HDMI 并存。社区的 SPI LCD 适配记录给出了确认方法：
 
@@ -499,11 +510,11 @@ sudo mv /etc/X11/xorg.conf.d/2-dr-accel.conf \
         /etc/X11/xorg.conf.d/2-dr-accel.conf.disable
 ```
 
-### 6.3 HDMI + USB 显示：取决于驱动
+### 2.3.6.3 HDMI + USB 显示：取决于驱动
 
 USB 转 HDMI 的显示适配器依赖 DisplayLink 一类内核驱动，官方镜像未预装。这不是"配置一下就能用"的场景，需要自行编译驱动，不属于本章范围。可行的替代是用 VNC 把桌面远程投到另一台设备上。
 
-### 6.4 多屏场景的务实选择
+### 2.3.6.4 多屏场景的务实选择
 
 | 需求 | 可行方案 | 说明 |
 | --- | --- | --- |
@@ -512,7 +523,7 @@ USB 转 HDMI 的显示适配器依赖 DisplayLink 一类内核驱动，官方镜
 | 需要触摸 + 大画面 | DSI 触摸屏（7/10.1/11.9 寸） | 触摸依赖 I2C，注意接线 |
 | 需要双物理屏 | HDMI + SPI LCD（第二块） | 需自己写 SPI 屏 overlay |
 
-### 6.5 SPI 屏的一个隐藏冲突
+### 2.3.6.5 SPI 屏的一个隐藏冲突
 
 社区案例里踩到过一条：**SPI 屏的 CS0 可能被板载 IMU 占用**。X5 板载 BMI088 走 SPI，CS0 已被它有主。这时 SPI 屏必须改用 CS1：
 
@@ -529,7 +540,7 @@ reg = <1>;              /* 用 CS1，不是 CS0 */
 
 ---
 
-## 7. 显示异常排查总表
+## 2.3.7 显示异常排查总表
 
 按现象对照，避免乱试：
 
@@ -546,7 +557,7 @@ reg = <1>;              /* 用 CS1，不是 CS0 */
 | `deferred probe pending` | `gpio_backlight` 模块未加载 | `lsmod \| grep backlight` |
 | 切到 DSI 后 HDMI 再也点不亮 | `xorg_hdmi_ignore.conf` 仍在生效 | 按 1.2 节做反向 mv |
 
-### 7.1 `xrandr` 报 `Can't open display` 的正确读法
+### 2.3.7.1 `xrandr` 报 `Can't open display` 的正确读法
 
 这条报错**与显示器无关**，是 X Server 侧的问题。两种情形：
 
@@ -559,7 +570,7 @@ reg = <1>;              /* 用 CS1，不是 CS0 */
 
 ---
 
-## 8. 四段式排障：切到 DSI 后开机黑屏，HDMI 也不亮
+## 2.3.8 四段式排障：切到 DSI 后开机黑屏，HDMI 也不亮
 **现象**
 
 按官方步骤用 `srpi-config` 切到 MIPI DSI 屏，重启后 DSI 屏黑、HDMI 也不亮，等于两头都没画面。串口能进系统。

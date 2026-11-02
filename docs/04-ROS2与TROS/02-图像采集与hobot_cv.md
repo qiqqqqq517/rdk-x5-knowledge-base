@@ -1,4 +1,15 @@
-# 图像采集与 hobot_cv
+---
+id: 04-ROS2与TROS-02-图像采集与hobot_cv
+volume: 4
+volume_title: ROS2 与 TROS
+title: 图像采集与 hobot_cv
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [mipi_cam, usb_cam, hobot_cv, 共享内存, QoS]
+summary: mipi_cam / usb_cam 采集、hobot_cv 的 vse 加速 resize、共享内存零拷贝、话题 QoS（/hbmem_img 是 BestEffort）。
+source_policy: "official-first, community-verified"
+---
+# 4.2 图像采集与 hobot_cv
 
 ## 本章解决什么
 
@@ -6,7 +17,7 @@ TROS 的图像链路不是「打开摄像头读帧」这么简单，它是一条
 
 本章讲清 `hobot_usb_cam`、`mipi_cam`、`hobot_image_publisher` 三个采集源怎么用，`hobot_cv` 的 VSE 硬件加速怎么用，`shared_mem` 零拷贝到底省掉了什么，以及话题/QoS 这一层最容易踩的坑。
 
-## 整条图像链路的形状
+## 4.2.1 整条图像链路的形状
 
 标准链路（官方与社区示例里反复出现的形态）：
 
@@ -52,7 +63,7 @@ PC 浏览器 http://<板卡IP>:8000
 
 **读这段日志的方法**：`in_format` / `out_format` 决定编码器要干什么活；`in_mode` / `out_mode` 决定数据是走普通 DDS 话题还是走共享内存；订阅端必须**同时**匹配格式和承载方式，否则接收端拿到的要么是空、要么是解释错误。
 
-### 三种承载模式的对照
+### 4.2.1.1 三种承载模式的对照
 
 | 模式 | 参数值 | 传输载体 | 适用 | 代价 |
 | --- | --- | --- | --- | --- |
@@ -60,7 +71,7 @@ PC 浏览器 http://<板卡IP>:8000
 | 共享内存零拷贝 | `out_mode:=shared_mem` | `/dev/shm/fast_datasharing*` | 同机多节点、高帧率高分辨率 | 需要两端都支持 loaned messages |
 | 硬件内存（hbmem） | 话题名 `/hbmem_img` | 板端专用内存池 | mipi_cam 直出到推理 | 需要 `hobot_shm` 环境变量配合 |
 
-## hobot_usb_cam
+## 4.2.2 hobot_usb_cam
 
 USB 摄像头驱动节点，输出 JPEG 或 YUYV 转出的图像。它的行为有两个特点必须知道：
 
@@ -91,7 +102,7 @@ USB 摄像头驱动节点，输出 JPEG 或 YUYV 转出的图像。它的行为�
 官方 FAQ 对此的定性：「这个提示本身通常是正常的，不一定代表摄像头无法工作」，节点会「继续使用一组默认的或无标定的参数来运行」。什么时候必须补标定文件：「如果您的应用需要精确的图像测量、三维重建、或者需要对图像进行去畸变处理」；只做显示或像素无关的 AI 推理则可以不管。
 > 来源：官方文档 FAQ/tros_ros（https://developer.d-robotics.cc/rdk_x_doc/FAQ/tros_ros）
 
-### 常用参数
+### 4.2.2.1 常用参数
 
 | 参数 | 含义 | 典型值 |
 | --- | --- | --- |
@@ -123,11 +134,11 @@ camera_node = IncludeLaunchDescription(
 **分辨率必须从设备支持列表里选**。设一个设备不支持的分辨率，节点不会自动降级，而是打开失败或输出异常尺寸——社区里「设 640×640 设不上去」的问题就是这么来的，因为多数 USB 摄像头根本没有 640×640 这个模式。
 > 来源：社区帖 34614（https://forum.d-robotics.cc/t/topic/34614）
 
-## mipi_cam
+## 4.2.3 mipi_cam
 
 MIPI 摄像头驱动。X5 的 MIPI 支持能力比 USB 强得多——直连 CSI，不占 USB 带宽，还能做双目同步采集。
 
-### 单目与双目的区别
+### 4.2.3.1 单目与双目的区别
 
 | 模式 | 关键参数 | 输出话题 |
 | --- | --- | --- |
@@ -148,7 +159,7 @@ ros2 run mipi_cam mipi_cam --ros-args -p device_mode:="dual" -p out_format:="nv1
 
 拼接后的图像在做标定或推理时，需要自己按宽度切一半取左/右目，注意 `step`（行跨度）也是双倍，不能直接用 `w*h*3/2` 算 nv12 尺寸。
 
-### launch 参数全表
+### 4.2.3.2 launch 参数全表
 
 从多个官方与社区示例里能归纳出的 `mipi_cam` 参数：
 
@@ -185,7 +196,7 @@ ros2 launch mipi_cam mipi_cam_dual_channel.launch.py \
 
 **注意这里一个反直觉的地方**：`mipi_cam_dual_channel.launch.py` 里设 `mipi_image_width:=1280`，实际出图是 1280×640 的拼接图，也就是**每目 640×640**。参数写的是拼接后的宽高，不是单目宽高。
 
-### 标定文件缺失的提示是中文的
+### 4.2.3.3 标定文件缺失的提示是中文的
 
 ```
 [mipi_cam-1] [WARN] [mipi_cam]: cal_file:/opt/tros/humble/lib/mipi_cam/config/calib_params.yaml
@@ -196,7 +207,7 @@ ros2 launch mipi_cam mipi_cam_dual_channel.launch.py \
 
 跟 USB 摄像头一样，这是警告不是错误，节点会继续用默认参数出图。需要 `camera_info` 话题里有真实内参时才需要补这个文件。
 
-### 支持的 MIPI host
+### 4.2.3.4 支持的 MIPI host
 
 X5 板子上有多个 MIPI CSI 接口，启动日志会列出可用的 host：
 
@@ -211,7 +222,7 @@ X5 板子上有多个 MIPI CSI 接口，启动日志会列出可用的 host：
 
 双目就是 host 0 + host 2 各接一路。接错口（比如把第二路接到 host 1）会导致只出一目。
 
-## hobot_image_publisher
+## 4.2.4 hobot_image_publisher
 
 不吃摄像头，读本地图片/视频按 ROS 消息发布。用途有两个：**没有硬件时验证算法链路**，以及**回灌测试**。
 
@@ -246,7 +257,7 @@ camera_node = IncludeLaunchDescription(
 
 **它的一个实用价值**：把「模型是否正常」和「相机链路是否正常」这两件事分开。`dnn_node_example` 有 `feed_type` 参数——`feed_type:=0` 表示读本地图片，`feed_type:=1` 表示订阅话题。模型出问题时先用 `feed_type:=0` + 本地图片排除相机因素。
 
-## hobot_cv：VSE 硬件加速
+## 4.2.5 hobot_cv：VSE 硬件加速
 
 `hobot_cv` 是图像处理的硬件加速库，把 resize、crop 这类操作从 CPU 挪到 VSE（Video Scale Engine）硬件单元。官方功能包总表里的描述是：
 
@@ -255,7 +266,7 @@ camera_node = IncludeLaunchDescription(
 
 注意括号里的平台限制：**滤波类加速只有 X3 有，X5 上只有 resize 和 crop**。
 
-### 能力演进（从官方发布记录）
+### 4.2.5.1 能力演进（从官方发布记录）
 
 | TROS 版本 | `hobot_cv` 变更 |
 | --- | --- |
@@ -268,7 +279,7 @@ camera_node = IncludeLaunchDescription(
 
 > 来源：官方文档 Release_Note/release_note（https://developer.d-robotics.cc/rdk_x_doc/Release_Note/release_note）
 
-### 版本分界线：vse resize bug
+### 4.2.5.2 版本分界线：vse resize bug
 
 这是本章最需要记住的一条版本事实。RDKOS 3.4.1 的发布说明写的是：
 
@@ -290,7 +301,7 @@ sudo apt update && sudo apt upgrade
 
 如果你在 3.3.3 上必须用 resize 且结果异常，绕过办法是**在采集端直接出目标分辨率**（`mipi_image_width` / `usb_image_width` 设成模型输入尺寸），不经过二次缩放。代价是放弃 VSE 的裁剪自由度。
 
-### VSE 是怎么工作的
+### 4.2.5.3 VSE 是怎么工作的
 
 从 VSE 的日志能直接读出它对每一路通道做了什么。以 `vio2encoder` 示例的初始化日志为例：
 
@@ -315,15 +326,15 @@ python 04_mipi_camera_crop_scale.py -i input.yuv -o output_640x480.yuv \
 
 这里 `-x 304 -y 304` 是裁剪起点，`--crop_w 896 --crop_h 592` 是裁剪尺寸，`-w 640 -h 480` 是缩放目标。裁剪加缩放在一次 VSE 调用里完成，这是软件实现做不到的。
 
-## shared_mem 零拷贝
+## 4.2.6 shared_mem 零拷贝
 
-### 零拷贝到底省了什么
+### 4.2.6.1 零拷贝到底省了什么
 
 默认情况下，ROS2 发布一帧图像要经历：用户缓冲 → DDS 序列化 → 共享内存/网络 → 反序列化 → 订阅方缓冲。1080p 的 nv12 单帧约 3 MB，30 fps 就是 90 MB/s 的纯拷贝开销，全压在 CPU 上。
 
 零拷贝的做法是：发布方**直接在共享内存里构造消息**，订阅方**拿到同一块内存的引用**，全程零次数据拷贝。ROS2 管这个叫 loaned messages（借贷消息）。
 
-### 环境变量四件套
+### 4.2.6.2 环境变量四件套
 
 ```bash
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
@@ -366,7 +377,7 @@ env of RMW_FASTRTPS_USE_QOS_FROM_XML is 1 , ignore env setting
 
 `env of ... is 1 , ignore env setting` 的意思是**环境变量已经由节点自己设好了，你手动 export 的版本被忽略**。所以引入了 `hobot_shm` 的 launch 不需要你手动 export，自己写的节点才需要。
 
-### 怎么验证零拷贝真的生效
+### 4.2.6.3 怎么验证零拷贝真的生效
 
 ```bash
 # 看共享内存文件是否存在（大小应与单帧数据量同量级）
@@ -379,7 +390,7 @@ sudo lsof /dev/shm/fast_datasharing*
 官方给的成功判据：「如果看到有类似 `fast_datasharing_...` 的文件被创建，并且文件大小与传输的数据（如图像帧大小）相关，则表明共享内存传输可能已启用」；`lsof` 的输出里应该能看到你的发布者和订阅者进程。
 > 来源：官方文档 FAQ/applications_and_examples（https://developer.d-robotics.cc/rdk_x_doc/FAQ/applications_and_examples）
 
-### 在 launch 里引入零拷贝
+### 4.2.6.4 在 launch 里引入零拷贝
 
 ```python
 # ------------------- Shared Memory -------------------
@@ -403,7 +414,7 @@ return LaunchDescription([
 
 顺序有讲究：`hobot_shm` 是设置环境变量的「配置节点」，必须**先于**所有要共享内存的节点启动，否则那些节点读到的是默认值。
 
-### 禁用零拷贝
+### 4.2.6.5 禁用零拷贝
 
 调试或兼容性问题时要关掉：
 
@@ -423,9 +434,9 @@ If you are using any other kind of subscriptions, set the ROS_DISABLE_LOANED_MES
 
 > 来源：社区帖 28151（https://forum.d-robotics.cc/t/topic/28151）
 
-## 话题与 QoS
+## 4.2.7 话题与 QoS
 
-### 核心话题表
+### 4.2.7.1 核心话题表
 
 | 话题 | 承载 | 典型格式 | 生产者 | 消费者 |
 | --- | --- | --- | --- | --- |
@@ -440,7 +451,7 @@ If you are using any other kind of subscriptions, set the ROS_DISABLE_LOANED_MES
 
 > 来源：社区帖 34614（https://forum.d-robotics.cc/t/topic/34614）、社区帖 35802（https://forum.d-robotics.cc/t/topic/35802）、社区帖 33330（https://forum.d-robotics.cc/t/topic/33330）
 
-### QoS 不兼容：一条消息都收不到
+### 4.2.7.2 QoS 不兼容：一条消息都收不到
 
 这是本章最高频的故障，报错原文：
 
@@ -490,7 +501,7 @@ qos_profile = QoSProfile(
 
 **另一条路**：不订阅 `/hbmem_img`，改成让 codec 输出到普通话题（`out_mode:=ros`），然后用默认 QoS。代价是丢掉零拷贝的性能收益。
 
-### QoS 之外：`ros2 topic hz` 确认链路
+### 4.2.7.3 QoS 之外：`ros2 topic hz` 确认链路
 
 QoS 匹配上了但没数据是另一回事。标准排查三步：
 
@@ -503,7 +514,7 @@ ros2 topic info /hbmem_img --verbose   # 看发布/订阅的 QoS 是否兼容
 `ros2 topic info --verbose` 会打印 publisher 和 subscription 各自的 QoS 配置，直接对比 `Reliability` 那一行就能确认。官方 FAQ 也给了同样的自查手段（用 `ros2 topic list` / `hz` / `echo` 验证摄像头是否在发数据）。
 > 来源：官方文档 FAQ/tros_ros（https://developer.d-robotics.cc/rdk_x_doc/FAQ/tros_ros）
 
-### 大图像传输失败时的 DDS 切换
+### 4.2.7.4 大图像传输失败时的 DDS 切换
 
 如果问题不在 QoS 而在带宽/分片，官方给的方案是换 DDS：
 
@@ -516,9 +527,9 @@ export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 注意这与零拷贝是**互斥**的：零拷贝依赖 Fast DDS 的 SHM 特性，切到 CycloneDDS 就没零拷贝了。所以顺序是：先修 QoS，QoS 没问题再考虑换 DDS。
 
-## 排障：采集端故障四段式
+## 4.2.8 排障：采集端故障四段式
 
-### 故障一：分辨率设不上
+### 4.2.8.1 故障一：分辨率设不上
 
 **现象**：
 
@@ -539,7 +550,7 @@ v4l2-ctl --device /dev/video0 --list-formats-ext
 
 **预防**：把「设备支持列表」当成选分辨率的唯一依据，不要按模型输入尺寸反推相机参数。模型要 640×640 就选一个接近的支持模式（如 640×480），让 `hobot_codec` 或 `hobot_cv` 去做缩放。
 
-### 故障二：双目只出一目
+### 4.2.8.2 故障二：双目只出一目
 
 **现象**：`device_mode:=dual` 启动了，但只有一路图像，或拼接图只有一半有效。
 
@@ -558,7 +569,7 @@ i2cdetect -y -r 6
 
 **预防**：接线前对照板子的 MIPI 接口丝印确认是 CSI0/CSI2，不要按物理位置相邻来推断。
 
-### 故障三：8000 端口打不开
+### 4.2.8.3 故障三：8000 端口打不开
 
 **现象**：跑完 `ros2 run mipi_cam mipi_cam` 后访问 `http://192.168.127.10:8000` 打不开。
 
@@ -598,7 +609,7 @@ ros2 launch websocket websocket.launch.py websocket_image_topic:=/image_jpeg web
 
 **预防**：记住三段式 `mipi_cam → hobot_codec → websocket`，缺任何一段 8000 都没画面。官方 SC132GS 模组的做法是把三段合进一个 launch：`ros2 launch mipi_cam mipi_cam_dual_channel_websocket.launch.py`。
 
-### 故障四：`ros2: command not found`
+### 4.2.8.4 故障四：`ros2: command not found`
 
 **现象**：
 

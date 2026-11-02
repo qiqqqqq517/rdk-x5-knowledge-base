@@ -1,4 +1,15 @@
-# TROS 架构与安装
+---
+id: 04-ROS2与TROS-01-TROS架构与安装
+volume: 4
+volume_title: ROS2 与 TROS
+title: TROS 架构与安装
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [TROS, ROS2, Humble, apt源, 版本对应]
+summary: TogetheROS.Bot 在 ROS2 Humble 之上的定位、tros-humble 包体系、apt 安装与 GPG 密钥、TROS 与 RDKOS 版本对应关系。
+source_policy: "official-first, community-verified"
+---
+# 4.1 TROS 架构与安装
 
 ## 本章解决什么
 
@@ -6,7 +17,7 @@ TogetheROS.Bot（下称 TROS）是地瓜机器人基于 ROS2 二次封装的机�
 
 关键前提：**TROS 与 RDKOS 是两条独立的版本号**。你嘴上说的「我的系统是 3.3.3」和「我的 TROS 是 2.4.3」是两个不同的数，混淆这两条线是本章后续所有排障错误的源头。
 
-## TROS 是什么，封了什么
+## 4.1.1 TROS 是什么，封了什么
 
 官方对 TROS 的定位原文：
 
@@ -24,7 +35,7 @@ TogetheROS.Bot（下称 TROS）是地瓜机器人基于 ROS2 二次封装的机�
 > 「TROS 通常在您烧录官方提供的 RDK OS 系统镜像时，就已经内置并预装在板卡上了。您不需要在烧录完系统后再手动执行完整的 TROS 安装流程。」
 > 来源：官方文档 FAQ/tros_ros（https://developer.d-robotics.cc/rdk_x_doc/FAQ/tros_ros）
 
-### 与标准 ROS2 的关系
+### 4.1.1.1 与标准 ROS2 的关系
 
 官方给出的对应关系是按 Ubuntu 底座版本绑定的：
 
@@ -42,7 +53,7 @@ RDK X5 全系基于 Ubuntu 22.04，所以 **X5 上只有 Humble 这一条线**�
 
 但有一个**硬限制**：一个终端会话里只能 source 一个 ROS 环境。同时装 TROS 和标准 ROS2 Humble 是允许的，两者能共存，但你 `source /opt/tros/humble/setup.bash` 之后就不要再去 source `/opt/ros/humble/setup.bash`，否则 `AMENT_PREFIX_PATH` 会互相覆盖，表现为「包明明装了却 `Package not found`」。
 
-### 三个组成部分
+### 4.1.1.2 三个组成部分
 
 TROS 的功能包在组织上分三层：
 
@@ -57,7 +68,7 @@ TROS 的功能包在组织上分三层：
 > 「TogetheROS.Bot（TROS）是地瓜机器人面向 RDK 的机器人操作系统，兼容 ROS 2（Foxy / Humble / Jazzy），由 Communication（通信与基础组件）、Boxs（算法功能包）、Apps（应用示例）三部分组成。」
 > 来源：社区帖 35812（https://forum.d-robotics.cc/t/topic/35812）
 
-## 版本对应表
+## 4.1.2 版本对应表
 
 这是本卷最重要的一张表。**RDKOS 版本号与 TROS 版本号不是同一个数**，官方只在部分 RDKOS 版本的发布说明里才标注同期 TROS 版本。
 
@@ -120,7 +131,7 @@ tros-humble-hobot-image-publisher/unknown,now 2.2.1-jammy.20241225.035542 arm64 
 
 > 来源：社区帖 34415（https://forum.d-robotics.cc/t/topic/34415）
 
-## 包体系与命名规则
+## 4.1.3 包体系与命名规则
 
 TROS 的包名统一前缀是 `tros-humble-`，ROS2 包名（`ros2 launch` 里用的那个）是去掉前缀、并把连字符换成下划线的形式。对应关系：
 
@@ -166,11 +177,11 @@ find /opt/tros/ -name example -executable -type f
 
 > 来源：官方文档 FAQ/applications_and_examples（https://developer.d-robotics.cc/rdk_x_doc/FAQ/applications_and_examples）
 
-## APT 源配置
+## 4.1.4 APT 源配置
 
 TROS 的包走地瓜官方 APT 源，配置文件是 `/etc/apt/sources.list.d/sunrise.list`。**源域名历史上改过几次**，老镜像上的配置基本都是错的。
 
-### 正确的源配置
+### 4.1.4.1 正确的源配置
 
 官方给出的正确写法（X5 那行是注释状态，因为文档示例是 S100 的机器）：
 
@@ -184,7 +195,7 @@ deb [signed-by=/usr/share/keyrings/sunrise.gpg] http://archive.d-robotics.cc/ubu
 
 X5 上应该启用的是 `ubuntu-rdk-x5 jammy universe` 这一行。
 
-### 域名演进与判错信号
+### 4.1.4.2 域名演进与判错信号
 
 官方列出的典型报错原文：
 
@@ -210,7 +221,7 @@ The following signatures couldn't be verified because the public key is not avai
 官方 FAQ 在讲 TROS 包更新时给的仍是「确保 D-Robotics 官方 APT 源（如 sunrise.horizon.cc 或最新的 archive.d-robotics.cc）配置正确」这种兼容表述，说明两个域名在文档体系里都出现过，但**实际可用的只有 `archive.d-robotics.cc`**。
 > 来源：官方文档 FAQ/tros_ros（https://developer.d-robotics.cc/rdk_x_doc/FAQ/tros_ros）
 
-### 修复步骤（可直接复制）
+### 4.1.4.3 修复步骤（可直接复制）
 
 ```bash
 # 1. 看当前配置错在哪
@@ -229,7 +240,7 @@ sudo apt update
 
 > 来源：官方文档 FAQ/hardware_and_system（https://developer.d-robotics.cc/rdk_x_doc/FAQ/hardware_and_system）
 
-### GPG 密钥为什么经常要更新
+### 4.1.4.4 GPG 密钥为什么经常要更新
 
 RDKOS 3.2.3 的镜像更新记录里有一条：
 
@@ -238,7 +249,7 @@ RDKOS 3.2.3 的镜像更新记录里有一条：
 
 这意味着**2025-06-10 之前烧的镜像，用 apt 更新时会遇到 `NO_PUBKEY`**。处置就是上面第 3 步。这也是为什么「老镜像 + apt upgrade」几乎必踩这个坑。
 
-### APT 锁被占用
+### 4.1.4.5 APT 锁被占用
 
 另一个高频报错：
 
@@ -251,9 +262,9 @@ E: Unable to lock directory /var/lib/apt/lists/
 官方给的原因与处置：系统后台可能在跑自动更新检查，或上次 apt 未正常结束。优先等待；确认没有 apt/dpkg 进程后再 `sudo kill XXXX`；清理锁文件（`/var/lib/apt/lists/lock`、`/var/cache/apt/archives/lock`、`/var/lib/dpkg/lock`）属于**有风险操作**，官方自己加了 ⚠️ 标注，必须在确认无进程时才能做。
 > 来源：官方文档 FAQ/hardware_and_system（https://developer.d-robotics.cc/rdk_x_doc/FAQ/hardware_and_system）
 
-## 更新与重装
+## 4.1.5 更新与重装
 
-### 常规更新
+### 4.1.5.1 常规更新
 
 ```bash
 sudo apt update && sudo apt upgrade
@@ -274,7 +285,7 @@ sudo apt install -y tros-humble-hobot-stereonet
 
 这是「包改名」导致 apt 无法自动处理依赖的典型情况。**判断方法**：如果 `apt upgrade` 报依赖冲突，先 `apt list --installed | grep <关键词>` 看是不是同名不同后缀的包并存。
 
-### 单包重装
+### 4.1.5.2 单包重装
 
 官方 FAQ 以 `hobot_usb_cam` 为例给了完整流程：
 
@@ -296,7 +307,7 @@ sudo apt install tros-humble-hobot-usb-cam
 
 适用场景是「怀疑某个功能包的配置文件被改乱或安装不完整」。注意这里官方用的是 `hobot-usb-cam`（连字符），而包名是 `tros-humble-hobot-usb-cam`，grep 时用不带 `tros-humble-` 前缀的关键词更稳。
 
-### 大版本不能 apt 升级
+### 4.1.5.3 大版本不能 apt 升级
 
 官方明确：
 
@@ -305,9 +316,9 @@ sudo apt install tros-humble-hobot-usb-cam
 
 对 X5 用户来说这条其实不构成障碍——X5 只有 Humble 一条线。但对从 X3（Foxy）迁移过来的用户是必读的：**不能把 X3 上的 TROS 原地升到 Humble，只能换板子或换镜像**。
 
-## 源码编译与交叉编译
+## 4.1.6 源码编译与交叉编译
 
-### 什么时候需要源码编译
+### 4.1.6.1 什么时候需要源码编译
 
 官方把场景分了三类：
 
@@ -330,7 +341,7 @@ pip3 install -U colcon-common-extensions empy
 
 > 来源：官方文档 FAQ/tros_ros（https://developer.d-robotics.cc/rdk_x_doc/FAQ/tros_ros）
 
-### 交叉编译 Docker 与 sysroot
+### 4.1.6.2 交叉编译 Docker 与 sysroot
 
 官方的交叉编译方案是「Docker + sysroot + CMake 工具链文件」三件套。社区帖里贴出了完整的操作序列：
 
@@ -367,7 +378,7 @@ PREFIX_PATH: x3
 
 这是交叉编译最隐蔽的坑之一：脚本不报错退出，只是按 X3 的 sysroot 去编，编出来的东西在 X5 上缺符号。
 
-### 依赖架构问题（x86 vs arm64）
+### 4.1.6.3 依赖架构问题（x86 vs arm64）
 
 社区里最典型的疑问是「x86 上编译时依赖库都是 x86 的，怎么让它用 arm64 的库」。官方给的答案：
 
@@ -376,7 +387,7 @@ PREFIX_PATH: x3
 
 所以**只要严格按文档在 Docker 里跑 `build.sh`，依赖路径问题会自动处理**，不需要手动指定。反过来说，如果你在宿主机上直接 cmake，就一定会踩架构混链。
 
-### sysroot_docker 缺失
+### 4.1.6.4 sysroot_docker 缺失
 
 另一个高频故障：拉了 Docker 镜像但里面没有 `sysroot_docker` 目录，导致后续所有 `rm` / `ln` / `touch` 全报 `No such file or directory`。
 
@@ -402,7 +413,7 @@ src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
 社区核对后确认这是 `dnn_node` 的 CMakeLists 写错了路径（应为 `segmentation/ptq_yolo8_seg_output_parser.cpp` 却写成 `detection/`），属于**特定 tag 的仓库 bug**，换 tag 或手动改 CMakeLists 才能过。
 > 来源：社区帖 28795（https://forum.d-robotics.cc/t/topic/28795）
 
-## 排障：debug 日志与定位
+## 4.1.7 排障：debug 日志与定位
 
 官方 FAQ 给了一套标准流程，值得照做：
 
@@ -430,7 +441,7 @@ apt show <tros_package_name>
 
 `rdkos_info` 的输出非常长（硬件型号、CPU/BPU 温度频率、内存、RDKOS 版本、内核版本、miniboot 版本、全部 hobot-* 与 tros-* 包清单、内核模块列表）。它是排查 TROS 问题的**第一手材料**，尤其是包清单部分能直接看出「哪个包版本老了」。
 
-## 源码与文档去哪找
+## 4.1.8 源码与文档去哪找
 
 TROS 的资料分散在三个地方，官方 FAQ 给过明确指引：
 
@@ -448,7 +459,7 @@ TROS 的资料分散在三个地方，官方 FAQ 给过明确指引：
 社区维护的资源汇总页把每个功能包的「文档 + 源码」两条链接并排列了出来，是最省时间的入口：`hobot_cv`、`hobot_dnn`、`hobot_codec`、`hobot_usb_cam`、`hobot_image_publisher` 等都在这张表里。
 > 来源：社区帖 35812（https://forum.d-robotics.cc/t/topic/35812）
 
-## TROS 与 Model Zoo 的模型资源分歧
+## 4.1.9 TROS 与 Model Zoo 的模型资源分歧
 
 这是 2025 年到 2026 年间 TROS 用户最容易被卡住的地方：**Model Zoo 里下载的模型，默认配置下的 `dnn_node` 可能跑不了**。
 
@@ -478,7 +489,7 @@ TROS 的资料分散在三个地方，官方 FAQ 给过明确指引：
 
 **记住这个顺序**：先 `hrt_model_exec model_info` 看模型输出的 `tensor type`，是 `S32` 就用官方默认 parser，是 `F32` 就得用上面两条路径之一。不要凭「模型是从 Model Zoo 下的」就假设它能直接跑。
 
-## 与标准 ROS2 共存
+## 4.1.10 与标准 ROS2 共存
 
 官方允许在板子上自行安装标准 ROS2 发行版，但给了一条明确约束：
 

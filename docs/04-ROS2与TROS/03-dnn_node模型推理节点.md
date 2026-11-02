@@ -1,4 +1,15 @@
-# dnn_node 模型推理节点
+---
+id: 04-ROS2与TROS-03-dnn_node模型推理节点
+volume: 4
+volume_title: ROS2 与 TROS
+title: dnn_node 模型推理节点
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [dnn_node, hobot_dnn, exit code -11, 后处理, parser]
+summary: dnn_node_example 完整用法、模型输入输出配置、后处理、以及 exit code -11 的完整根因链（bbox 输出 F32 与 parser 按 int32 读取的不匹配）。
+source_policy: "official-first, community-verified"
+---
+# 4.3 dnn_node 模型推理节点
 
 ## 本章解决什么
 
@@ -6,7 +17,7 @@
 
 本章讲清 `dnn_node_example` 的完整用法、JSON 配置的每个字段、后处理解析器的分类、推理延迟统计怎么读、自定义模型怎么接，以及 Python/C++ 两套接口的边界。
 
-## 架构：dnn_node 与 dnn_node_example
+## 4.3.1 架构：dnn_node 与 dnn_node_example
 
 | 包 | 角色 | 内容 |
 | --- | --- | --- |
@@ -22,7 +33,7 @@
 
 > 来源：社区帖 34784（https://forum.d-robotics.cc/t/topic/34784）
 
-### 继承 DnnNode 必须实现的三个接口
+### 4.3.1.1 继承 DnnNode 必须实现的三个接口
 
 官方巡线案例里给了最小清单：
 
@@ -37,9 +48,9 @@
 | `SetOutputParser()` | 按 `dnn_parser` 字段 new 出对应的 parser | `yolov8` → `PtqYolo8OutputParser` |
 | `PostProcess()` | 把 parser 输出的检测框转成自定义 msg 发出去 | 填 `hobot_dnn_detection` |
 
-## dnn_node_example 完整用法
+## 4.3.2 dnn_node_example 完整用法
 
-### 两种 launch：订阅 vs 回灌
+### 4.3.2.1 两种 launch：订阅 vs 回灌
 
 | launch 文件 | 用途 | 输入来源 |
 | --- | --- | --- |
@@ -67,7 +78,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 > 来源：社区帖 28151（https://forum.d-robotics.cc/t/topic/28151）
 
-### 参数全表
+### 4.3.2.2 参数全表
 
 启动日志会把所有参数打出来，这是最可靠的参数清单来源：
 
@@ -102,7 +113,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 **`is_shared_mem_sub` 与 codec 的 `out_mode` 必须配对**：codec 输出 `shared_mem` 就设 `1`，输出 `ros` 就设 `0`。配错的表现不是报错，而是「节点起来了但一直收不到图」，或者到了 QoS 不兼容的 WARN。
 
-### 运行时日志怎么读
+### 4.3.2.3 运行时日志怎么读
 
 一次成功的加载会依次打印这些：
 
@@ -136,7 +147,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 **这段日志是本卷最重要的一段。** 它把模型的真实输入输出全部摊开：`[output]` 的每一项都写明 layout、shape、type。后面所有 `exit code -11` 的根因都能从这 6 行里读出来。
 
-### Model Info 的三个字段决定一切
+### 4.3.2.4 Model Info 的三个字段决定一切
 
 | 字段 | 取值 | 含义 |
 | --- | --- | --- |
@@ -146,7 +157,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 `Type` 这一项是社区里最长的那个帖（34784，18 个回复）的全部内容。**YOLOv8 的 bbox 分支如果编译出来是 F32，而 parser 按 S32 去读，就是段错误。**
 
-## JSON 配置详解
+## 4.3.3 JSON 配置详解
 
 `dnn_node` 的模型配置是一个 JSON 文件，字段按模型族不同而不同。以社区里最常见的 YOLOv8 为例：
 
@@ -169,7 +180,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 > 来源：社区帖 34784（https://forum.d-robotics.cc/t/topic/34784）
 
-### 字段说明
+### 4.3.3.1 字段说明
 
 | 字段 | 必填 | 含义 | 配错的表现 |
 | --- | --- | --- | --- |
@@ -187,7 +198,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 | `output_order` | 视模型 | 输出张量顺序映射 | 顺序错导致解析出垃圾 |
 | `anchors_table` | YOLOv5 系 | 三组 anchor | YOLOv5 必须给 |
 
-### 支持的解析器清单
+### 4.3.3.2 支持的解析器清单
 
 解析器名字写错时，节点会直接把支持列表打印出来——这是最可靠的白名单：
 
@@ -200,7 +211,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 
 注意报错原文里有个**容易误读的地方**：它说「Invalid parser: yolov5」，但紧接着列表里又有 `yolov5`。这不是矛盾——那个用户写的是 `yolov5 `（结尾带空格，见原文的 `yolov5 .`），空格导致字符串比较失败。**排错时第一件事是检查 JSON 里的不可见字符。**
 
-### 版本演进：新增 ultralytics_yolo 解析器
+### 4.3.3.3 版本演进：新增 ultralytics_yolo 解析器
 
 较新的 `hobot_dnn`（≥ 2.6.1）新增了 `ultralytics_yolo` 解析器，专门处理 Model Zoo 里**没有反量化节点**的 FP32 输出模型：
 
@@ -238,7 +249,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py \
 **注意版本门槛**：`ultralytics_yolo` 是 `hobot_dnn` 2.6.1 才加入的。社区有人确认「Tros Hobot Dnn 版本无法更新到 2.6.1，即便是最新版本的镜像」，官方的回复是「`ultralytics_yolo` 为 2.6.1 新加入 parser……整体的 TROS 还处于测试源中，若无法直接更新，可以自行拉源码编译来使用」。
 > 来源：社区帖 34415（https://forum.d-robotics.cc/t/topic/34415）
 
-### 一个反直觉的忠告：不要直接改默认配置
+### 4.3.3.4 一个反直觉的忠告：不要直接改默认配置
 
 > 「强烈建议不要直接修改手册中的默认 config 文件。原配置可能在运行时被覆盖，或者系统会默认回退加载原配置，导致您的修改『看似生效，实则无效』。正确做法：新建或复制配置文件。」
 > 来源：社区帖 34415（https://forum.d-robotics.cc/t/topic/34415）
@@ -251,9 +262,9 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
 
 这条忠告的价值在排查阶段尤其明显：如果配置文件是同名覆盖的，改完之后你**无法判断**生效的是新版还是被回退的旧版。
 
-## 后处理与解析器
+## 4.3.4 后处理与解析器
 
-### YOLOv8 输出结构是什么样
+### 4.3.4.1 YOLOv8 输出结构是什么样
 
 YOLOv8 是**解耦头**（decoupled head），三个尺度各出两个张量：cls 分支和 reg/bbox 分支。6 个输出：
 
@@ -290,7 +301,7 @@ YOLOv8 是**解耦头**（decoupled head），三个尺度各出两个张量：c
 
 **这段 JSON 里有个坑**：字段名写的是 `dnn_Parser`（大写 P），而其他例子里是 `dnn_parser`（全小写）。JSON 键名大小写敏感，如果节点读的是小写键，这个配置里的解析器设置就是无效的。遇到「解析器设置没生效」时检查这里。
 
-### layout 与 type 是硬约束
+### 4.3.4.2 layout 与 type 是硬约束
 
 社区帖 34784 里最关键的结论：
 
@@ -338,7 +349,7 @@ def Detect_forward(self, x):
 > 「不要自己修改导出脚本，直接使用社区验证过的：`git clone -b rdk_x5 https://github.com/D-Robotics/rdk_model_zoo.git`……最关键的是使用 rdk_model_zoo 官方的导出脚本，不要自己修改 `Detect_forward` 函数。」
 > 来源：社区帖 34784（https://forum.d-robotics.cc/t/topic/34784）
 
-### F32 vs S32：本卷最长的一个坑
+### 4.3.4.3 F32 vs S32：本卷最长的一个坑
 
 现象（原样抄）：
 
@@ -391,7 +402,7 @@ quanti type: NONE
 
 **注意 `quanti type: NONE` 这个字段**——S32 输出配合 `quanti type: NONE` 是官方形态；如果是 S32 但 quanti type 是 SCALE，说明还有一层量化参数要处理。
 
-### 修复路径：两条，优先级明确
+### 4.3.4.4 修复路径：两条，优先级明确
 
 **路径 A（推荐）：用 rdk_model_zoo 官方导出脚本重新导出**
 
@@ -453,7 +464,7 @@ If you understand the risks and want to override a package anyways, add the foll
 
 要真正覆盖 `/opt/tros/humble` 里的版本，必须加 `--allow-overriding dnn_node_sample`。
 
-### 第三条路：干脆不用 TROS 解析器
+### 4.3.4.5 第三条路：干脆不用 TROS 解析器
 
 如果 parser 始终对不上，社区帖 34784 的备选方案是用 Python 自己后处理：
 
@@ -478,7 +489,7 @@ outputs = model.inference(input_image)
 
 **这段代码有版本陷阱**：`from hobot_dnn import pyeasy_dnn` 是 **RDKOS 3.5.0 之前**的写法。3.5.0 起 Python 侧统一为 `hbm_runtime`，`pyeasy_dnn` 不再适用。
 
-### 输出头的快速验证
+### 4.3.4.6 输出头的快速验证
 
 不确定模型输出对不对时，用 Python 一行命令打印：
 
@@ -496,9 +507,9 @@ python3 -c "from hobot_dnn import pyeasy_dnn as dnn; models = dnn.load('/path/to
 
 这是**单类别**（`1` 而不是 `5`）的 YOLOv8 输出，6 个张量，NHWC layout。**只看 shape 就能判断模型是不是 YOLOv8 解耦头**：出现 `64`（=4×reg_max=4×16）就是有 DFL。
 
-## 推理延迟统计
+## 4.3.5 推理延迟统计
 
-### 延迟从哪里看
+### 4.3.5.1 延迟从哪里看
 
 `dnn_node` 会在推理完成后打印耗时。但这个数值在 RDKOS **3.4.1 之前是错的**：
 
@@ -510,7 +521,7 @@ RDK 总览页的写法是「`hobot_dnn` 修复：修正了板端模型推理框�
 
 **这条对性能调优影响很大**：3.3.3 及更早的板子上，`hobot_dnn` 报出来的推理延迟是错的。如果你在这些版本上测性能，得到的数字不能作为优化依据。判断方法同第一章——`cat /etc/version` 看是不是 ≥ 3.4.1。
 
-### 正确的测量方法：hrt_model_exec
+### 4.3.5.2 正确的测量方法：hrt_model_exec
 
 脱离 ROS 层，直接用板端工具测，这是唯一能分清楚「BPU 耗时」和「CPU 耗时」的方法：
 
@@ -527,7 +538,7 @@ hrt_model_exec perf --thread_num 2 --model_file ./model.bin --loop_num 100
 > 「单线程延迟为单帧、单线程、单 BPU 核心的延迟，BPU 推理一个任务最理想的情况。多线程帧率为多个线程同时向 BPU 塞任务，每个 BPU 核心可以处理多个线程的任务，一般工程中 2 个线程可以控制单帧延迟较小，同时吃满所有 BPU 到 100%，在吞吐量（FPS）和帧延迟间得到一个较好的平衡。」
 > 来源：社区帖 34885（https://forum.d-robotics.cc/t/topic/34885）
 
-### 一个真实的性能剖析案例
+### 4.3.5.3 一个真实的性能剖析案例
 
 社区帖 34885 里有一个非常完整的耗时拆解，值得作为排障范本：
 
@@ -552,7 +563,7 @@ thread_num 1 测试结果：
 
 **这个案例的通用价值**：看到「性能不达预期」时，第一反应不该是换模型，而是先用 `thread_num 1` 和 `thread_num 2` 分别测，看瓶颈到底在 BPU 还是 CPU。如果两个线程数下 BPU 耗时差不多而 FPS 差很多，瓶颈就在 CPU 侧的每帧固定开销。
 
-### 另一个真实案例：从 7 FPS 到 47 FPS
+### 4.3.5.4 另一个真实案例：从 7 FPS 到 47 FPS
 
 社区帖 33301 记录了 YOLOv11n 的完整优化过程，起点数据：
 
@@ -566,16 +577,16 @@ BPU推理延迟：126ms
 
 **这个案例的启示**：`hrt_model_exec perf` 测出来的数如果远低于同算力的官方模型，问题多半在模型结构（算子不被 BPU 支持而降级到 CPU），不在 TROS 配置。
 
-### batch > 1
+### 4.3.5.5 batch > 1
 
 RDK X5 的 `.bin` 模型支持 batch > 1。社区确认过：「确认：RDK X5 的 `.bin` 模型支持输入 batch 大于 1」。
 > 来源：社区帖 34885（https://forum.d-robotics.cc/t/topic/34885）
 
 但量化时校准数据数量要是 batch 的倍数，或者工具会自动重复使用数据。batch 增大能提升吞吐但会增加单帧延迟——是否值得取决于应用是「追帧率」还是「追延迟」。
 
-## 自定义模型接入（C++ 路线）
+## 4.3.6 自定义模型接入（C++ 路线）
 
-### 完整流程
+### 4.3.6.1 完整流程
 
 | 步骤 | 做什么 | 产出 |
 | --- | --- | --- |
@@ -586,7 +597,7 @@ RDK X5 的 `.bin` 模型支持 batch > 1。社区确认过：「确认：RDK X5 
 | 5 | 跑 `dnn_node_example_feedback` 单图验证 | 排除相机因素 |
 | 6 | 接相机跑完整链路 | 端到端跑通 |
 
-### 量化 YAML 的标准配置
+### 4.3.6.2 量化 YAML 的标准配置
 
 社区里反复出现的可用配置（YOLOv8 5 分类）：
 
@@ -640,7 +651,7 @@ compiler_parameters:
 **关于 `optimization_parameters`**：社区明确提到「不要添加 `optimization_parameters`（1.24.3 版本不支持）」。工具链版本与参数支持范围绑定，抄配置时要对版本。
 > 来源：社区帖 34784（https://forum.d-robotics.cc/t/topic/34784）
 
-### 编译产物验证
+### 4.3.6.3 编译产物验证
 
 ```bash
 # 看输出数量与每个输出的类型
@@ -671,7 +682,7 @@ output[0]:
 
 `input source: HB_DNN_INPUT_FROM_PYRAMID` 说明输入走 pyramid（BPU 直连），这是 X5 上性能最好的输入方式。如果显示 `FROM_DDR`，说明要走一次 CPU 到 BPU 的搬运。
 
-### 模型 vs 相机分辨率不匹配
+### 4.3.6.4 模型 vs 相机分辨率不匹配
 
 社区里有个案例：模型 640×640，相机只支持 640×480，`feed_type` 设 0 也没生效，最终结果同样是 `exit code -11`。诊断结论：
 
@@ -692,9 +703,9 @@ output[0]:
 
 **第 1 步是关键**：`hrt_model_exec` 完全绕过 ROS，如果它都跑不通，问题在模型不在节点。这一步能省掉大量盲改。
 
-## Python 路线
+## 4.3.7 Python 路线
 
-### 版本分界（最重要的一条）
+### 4.3.7.1 版本分界（最重要的一条）
 
 | RDKOS 版本 | Python 推理接口 | 典型 import |
 | --- | --- | --- |
@@ -710,7 +721,7 @@ output[0]:
 
 **而 TROS 侧的 C++ 推理始终是 `hobot_dnn`**，不受这个切换影响。这不是矛盾，是两套并行接口：Python 走 `hbm_runtime`，C++ 走 `hobot_dnn`。把这两条混为一谈是本章最容易犯的版本错误。
 
-### 旧接口（3.4.1 及以下）
+### 4.3.7.2 旧接口（3.4.1 及以下）
 
 ```python
 from hobot_dnn import pyeasy_dnn as dnn
@@ -731,7 +742,7 @@ outputs = model.inference(input_tensor)
 更多细节可参考官方 Python 多媒体接口文档：
 > 来源：官方文档 Basic_Application/multi_media_sp_dev_api/RDK_X3/pydev_multimedia_api_x3/object_pyeasy_dnn（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/multi_media_sp_dev_api/RDK_X3/pydev_multimedia_api_x3/object_pyeasy_dnn）
 
-### 新接口（3.5.0 及以上）
+### 4.3.7.3 新接口（3.5.0 及以上）
 
 3.5.0 的官方示例在 `/app/pydev_demo/` 下，全部基于 `hbm_runtime` 重写。官方对这批示例的说明：「基于新版 `hbm_runtime` 接口，对 `/app/pydev_demo/` 下所有示例完成全量重写，确保接口统一、性能最优、使用更简洁。」
 > 来源：官方文档 Release_Note/release_note（https://developer.d-robotics.cc/rdk_x_doc/Release_Note/release_note）
@@ -752,7 +763,7 @@ Open USB camera successfully
 官方对该示例的描述是「演示如何使用 `hbm_runtime` 结合 YOLOv5X 模型对 USB 摄像头画面进行推理」。
 > 来源：官方文档 Basic_Application/vision/RDK_X5/usb_camera（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/vision/RDK_X5/usb_camera）
 
-### Python 与 C++ 的边界
+### 4.3.7.4 Python 与 C++ 的边界
 
 | 维度 | Python（`hbm_runtime`） | C++（`hobot_dnn`） |
 | --- | --- | --- |
@@ -763,9 +774,9 @@ Open USB camera successfully
 | 适合场景 | 快速验证、算法原型 | 产品集成、多节点协同 |
 | 版本切换 | 3.5.0 换接口 | 不换，一直是 `hobot_dnn` |
 
-## 排障四段式
+## 4.3.8 排障四段式
 
-### 故障一：`exit code -11` 段错误（输出类型不匹配）
+### 4.3.8.1 故障一：`exit code -11` 段错误（输出类型不匹配）
 
 **现象**：
 
@@ -790,7 +801,7 @@ hrt_model_exec model_info --model_file=./cow.bin
 
 **预防**：量化完模型后**必做**的一步是 `hrt_model_exec model_info`，对照官方模型的输出签名（layout/type/shape）逐项核对，不要跳过。
 
-### 故障二：`Invalid parser`
+### 4.3.8.2 故障二：`Invalid parser`
 
 **现象**：
 
@@ -812,7 +823,7 @@ python3 -c "import json; d=json.load(open('config/x.json')); print({k: repr(v) f
 
 **预防**：配置用 `cp` 官方文件再改，不要手打 JSON。
 
-### 故障三：`Infer TimeOut` + `Invalid node_output->output_tensors`
+### 4.3.8.3 故障三：`Infer TimeOut` + `Invalid node_output->output_tensors`
 
 **现象**：
 
@@ -850,7 +861,7 @@ calibration_parameters:
 
 **预防**：量化 YAML 里的 `march` 是最容易跨平台抄错的一项。X3 → `bayes`，X5 → `bayes-e`，X5 用 `bayes` 编出来的模型在 X5 上跑不了。
 
-### 故障四：`feed_type` 不生效，仍在读相机
+### 4.3.8.4 故障四：`feed_type` 不生效，仍在读相机
 
 **现象**：设了 `feed_type:=0` 和本地图片，但节点还是崩，日志显示在处理相机帧。
 

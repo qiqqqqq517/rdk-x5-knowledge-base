@@ -1,4 +1,15 @@
-# Python 推理接口演变
+---
+id: 03-AI推理与工具链-02-Python推理接口演变
+volume: 3
+volume_title: AI 推理与工具链
+title: Python 推理接口演变
+lang: zh-CN
+rdkos_scope: "3.0.0 ~ 3.5.0"
+tags: [hbm_runtime, pyeasy_dnn, bpu_infer_lib, 版本分界, 迁移]
+summary: pyeasy_dnn（≤3.4.1）→ bpu_infer_lib（过渡，已停维护）→ hbm_runtime（3.5.0+）三代断代、能力矩阵、数据类型与 stride、迁移坑与示例目录对照。
+source_policy: "official-first, community-verified"
+---
+# 3.2 Python 推理接口演变
 
 ## 本章解决什么
 
@@ -11,7 +22,7 @@ RDK X5 的 Python 推理接口在三年里换过三次，而且三次的分界�
 > 来源：官方文档 Release_Note/release_note（https://developer.d-robotics.cc/rdk_x_doc/Release_Note/release_note）
 > 来源：官方文档 Basic_Application/multi_media_sp_dev_api/RDK_X5/pydev_multimedia_api_x5/ai-python-api（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/multi_media_sp_dev_api/RDK_X5/pydev_multimedia_api_x5/ai-python-api）
 
-## 三代接口的完整时间线
+## 3.2.1 三代接口的完整时间线
 
 先把结论摆在前面，避免中途绕晕：
 
@@ -23,7 +34,7 @@ RDK X5 的 Python 推理接口在三年里换过三次，而且三次的分界�
 
 **必须强调的一点**：`hbm_runtime` 不是 `pyeasy_dnn` 的别名，不是它的封装，也不是「同一个东西改了个名字」。两者是**两个独立实现、两套 API 形状、两套数据约定**。把 `hbm_runtime` 写成 `pyeasy_dnn` 的别名是本仓库明确禁止的错误。
 
-### 分界线一：pyeasy_dnn 的时代
+### 3.2.1.1 分界线一：pyeasy_dnn 的时代
 
 官方在 X3 的接口手册里对 pyeasy_dnn 的定位写得很清楚：
 
@@ -45,7 +56,7 @@ RDK X5 的 Python 推理接口在三年里换过三次，而且三次的分界�
 
 **注意 `hobot_dnn` 与 `pyeasy_dnn` 的关系**：`hobot_dnn` 是包名，`pyeasy_dnn` 是它下面的子模块。所以永远写 `from hobot_dnn import pyeasy_dnn as dnn`，而不是 `import pyeasy_dnn`。这个细节在第三章讲 `hobot_dnn` 的 C++ 侧时还会再出现一次 —— TROS 的 C++ 推理框架也叫 `hobot_dnn`，同名但不同物。
 
-### 分界线二：bpu_infer_lib 的短暂存在
+### 3.2.1.2 分界线二：bpu_infer_lib 的短暂存在
 
 在 pyeasy_dnn 和 hbm_runtime 之间，还短暂存在过一个叫 `bpu_infer_lib` 的接口。它现在已经不能用了，官方在社区给出的答复非常直接：
 
@@ -70,7 +81,7 @@ RDK X5 的 Python 推理接口在三年里换过三次，而且三次的分界�
 
 > 来源：社区帖 34823（https://forum.d-robotics.cc/t/topic/34823）
 
-### 分界线三：RDKOS 3.5.0 统一为 hbm_runtime
+### 3.2.1.3 分界线三：RDKOS 3.5.0 统一为 hbm_runtime
 
 官方的版本发布说明写得很硬：
 
@@ -88,9 +99,9 @@ RDK X5 的 Python 推理接口在三年里换过三次，而且三次的分界�
 
 这里有个容易读漏的因果：**接口换了 → 示例全量重写了 → 文档也全面修订了**。所以 3.5.0 之后你在官网上看到的 Python 示例，和 3.4.1 时代网上流传的示例，**连文件路径都不一样**。
 
-## 三代代码逐行对照
+## 3.2.2 三代代码逐行对照
 
-### pyeasy_dnn 版（RDKOS ≤ 3.4.1）
+### 3.2.2.1 pyeasy_dnn 版（RDKOS ≤ 3.4.1）
 
 ```python
 # 仅适用于 RDKOS 3.5.0 之前的 X5（以及 X3 全系）
@@ -154,7 +165,7 @@ for i, out in enumerate(outputs):
 
 `out.buffer` 是 pyeasy_dnn 独有的取数方式，hbm_runtime 里没有这个概念。
 
-### hbm_runtime 版（RDKOS ≥ 3.5.0）
+### 3.2.2.2 hbm_runtime 版（RDKOS ≥ 3.5.0）
 
 ```python
 # 仅适用于 RDKOS 3.5.0 及以上的 RDK X5
@@ -190,7 +201,7 @@ print("Output:", output_array)
 
 **差异三：输出直接是 numpy 数组。** pyeasy_dnn 要 `np.array(out.buffer)` 再读 `out.properties`；hbm_runtime 的 `run()` 返回 `Dict[str, Dict[str, np.ndarray]]`，外层键是模型名、内层键是输出张量名、值就是数组。
 
-### 多模型 / 多输入：hbm_runtime 的新能力
+### 3.2.2.3 多模型 / 多输入：hbm_runtime 的新能力
 
 pyeasy_dnn 时代要跑多模型，得自己用 Python 线程调度。hbm_runtime 直接把多模型封装进了构造函数：
 
@@ -220,7 +231,7 @@ run(multi_input_tensors: Dict[str, Dict[str, np.ndarray]], **kwargs) -> Dict[str
 
 这句括号很重要。X5 的 BPU 是单核（见第一章），所以「多线程并行」在 X5 上不会真的让两个模型同时在 BPU 上算，它优化的是「CPU 后处理与 BPU 计算重叠」。不要指望靠多模型加载把吞吐翻倍。
 
-### 调度参数：pyeasy_dnn 没有，hbm_runtime 有了
+### 3.2.2.4 调度参数：pyeasy_dnn 没有，hbm_runtime 有了
 
 这是 hbm_runtime 相对 pyeasy_dnn 最大的一项能力增量：
 
@@ -254,11 +265,11 @@ def set_scheduling_params(
 
 > 来源：官方文档 Basic_Application/multi_media_sp_dev_api/RDK_X5/pydev_multimedia_api_x5/ai-python-api（https://developer.d-robotics.cc/rdk_x_doc/Basic_Application/multi_media_sp_dev_api/RDK_X5/pydev_multimedia_api_x5/ai-python-api）
 
-## 迁移时最常见的坑
+## 3.2.3 迁移时最常见的坑
 
 下面每一条都在社区里被真实踩过，按踩到的频率排序。
 
-### 坑一：`ModuleNotFoundError`，两个方向都会撞
+### 3.2.3.1 坑一：`ModuleNotFoundError`，两个方向都会撞
 
 3.5.0 系统上跑旧代码：
 
@@ -287,7 +298,7 @@ ModuleNotFoundError: No module named 'hbm_runtime'
 
 而这份文档正文里明确写着「用于演示如何使用 hbm_runtime 模块进行目标检测任务」，API 流程里列的是 `hbm_runtime.HB_HBMRuntime(model_path)`。**判断依据：以文档正文的 API 说明为准，FAQ 那条是从 X3 版页面复制过来没改干净的残留。** 在 3.5.0 上你应该装 `hbm_runtime`，`hobot_dnn` 的 Python 子模块已经不在新示例的依赖里。
 
-### 坑二：`dnn.load()` 返回的是列表，忘了取 `[0]`
+### 3.2.3.2 坑二：`dnn.load()` 返回的是列表，忘了取 `[0]`
 
 pyeasy_dnn：
 
@@ -304,7 +315,7 @@ model = HB_HBMRuntime(path)   # 直接就是运行时对象，不需要取下标
 
 从 pyeasy_dnn 迁到 hbm_runtime 时如果保留 `[0]`，会得到 `TypeError` 或者拿到一个语义不对的对象；反过来迁移时会拿到列表却当成模型用，报 `AttributeError`。这两个方向都要改这一行。
 
-### 坑三：输出的取数方式完全不同
+### 3.2.3.3 坑三：输出的取数方式完全不同
 
 | | pyeasy_dnn | hbm_runtime |
 | --- | --- | --- |
@@ -315,7 +326,7 @@ model = HB_HBMRuntime(path)   # 直接就是运行时对象，不需要取下标
 
 pyeasy_dnn 把「数值」和「属性」分成 `.buffer` 与 `.properties` 两块；hbm_runtime 把数值塞进 dict、把属性单独挂在 `output_shapes` / `output_quants` 上。迁移时「照抄后处理」一定会崩在这一步。
 
-### 坑四：反量化（dequantize）从「隐式」变成「显式」
+### 3.2.3.4 坑四：反量化（dequantize）从「隐式」变成「显式」
 
 这是最隐蔽、后果最严重的差异。
 
@@ -353,7 +364,7 @@ for model_name, outputs in output_quanti.items():
 
 > 来源：社区帖 35445（https://forum.d-robotics.cc/t/topic/35445）
 
-### 坑五：`/app/pydev_demo/` 路径全变了
+### 3.2.3.5 坑五：`/app/pydev_demo/` 路径全变了
 
 3.5.0 的「全量重写」不只是改代码，连目录名都改了。对照如下：
 
@@ -379,7 +390,7 @@ for model_name, outputs in output_quanti.items():
 
 **照着 3.4.x 时代的教程在 3.5.0 上找文件，会找不到。** 这不是教程写错了，是它写的那个版本已经不存在了。
 
-### 坑六：featuremap 多通道输入在旧接口上不完善
+### 3.2.3.6 坑六：featuremap 多通道输入在旧接口上不完善
 
 这一条不太算「迁移坑」，更像「不该迁移的时候别硬撑」。
 
@@ -397,7 +408,7 @@ for model_name, outputs in output_quanti.items():
 
 这说明：**3.5.0 换接口不只是「改写法」，还修好了旧接口在特定输入类型上的能力缺失。** 如果你在旧系统上遇到「ONNX 正常、bin 异常、转换日志也没报错」，先怀疑是不是这一类，而不是先怀疑自己的后处理。
 
-### 坑七：把 Python 接口和 C++ 接口混为一谈
+### 3.2.3.7 坑七：把 Python 接口和 C++ 接口混为一谈
 
 一个高频困惑是：官方文档一会儿说用 `hbm_runtime`，一会儿又提到 `hobot_dnn`，到底哪个。
 
@@ -415,7 +426,7 @@ for model_name, outputs in output_quanti.items():
 
 所以看到「Python 用 `hbm_runtime`、C++ 用 `hobot_dnn`」不要以为是矛盾，这是分工。
 
-## 一张迁移检查表
+## 3.2.4 一张迁移检查表
 
 从 pyeasy_dnn 迁到 hbm_runtime，按这个顺序改，改完一条划一条：
 
@@ -453,7 +464,7 @@ np_dtype = hb_dtype_map.get(input_dtypes[name].name, np.float32)
 
 注意取的是 `.name` 字符串再查表，不是直接拿枚举当 dtype 用。另外 NV12 输入（`NV12` 枚举）不在通用映射表里，它的 numpy 表达是 `uint8` 的扁平数组，需要单独处理。
 
-## 三代接口的能力对照
+## 3.2.5 三代接口的能力对照
 
 把三代接口放在一张表里横向对比，能更清楚地看出为什么要换。
 
@@ -481,7 +492,7 @@ np_dtype = hb_dtype_map.get(input_dtypes[name].name, np.float32)
 
 `featuremap 多通道输入` 那一行的「支持不完善」，来自官方人员对 3.0.0 系统上 featuremap 模型精度异常的答复（详见本章「坑六」）。
 
-### 数据类型枚举的实际用法
+### 3.2.5.1 数据类型枚举的实际用法
 
 `hbm_runtime` 的 `hbDNNDataType` 是一个完整的枚举，官方列出的取值有 17 个：
 
@@ -524,7 +535,7 @@ def resolve_np_dtype(dtype_enum) -> np.dtype:
     return hb_dtype_map.get(name, np.float32)
 ```
 
-### 张量 stride 的含义
+### 3.2.5.2 张量 stride 的含义
 
 `hbm_runtime` 提供了 `input_strides` / `output_strides`，这是 pyeasy_dnn 完全没有的信息。官方示例里的输出是：
 
@@ -538,7 +549,7 @@ def resolve_np_dtype(dtype_enum) -> np.dtype:
 
 这个信息什么时候有用？当你需要**避免一次拷贝**、把 numpy 数据直接按硬件期望的内存布局写进去时。多数场景用不上，但只要涉及零拷贝或自己管理 buffer，就必须看 stride —— 因为对齐后的内存布局（`alignedShape`）和逻辑形状（`validShape`）可能不一致，宽度不是 32 对齐时要补 padding。
 
-## 版本与接口的组合矩阵
+## 3.2.6 版本与接口的组合矩阵
 
 实际工程里，「我的板子是什么版本、我的代码是哪一代、我的模型是哪一年编的」这三件事经常对不齐。下面这张表列出所有常见组合及结果。
 
@@ -564,11 +575,11 @@ def resolve_np_dtype(dtype_enum) -> np.dtype:
 
 所以「能加载」这个信号不足以下结论，必须跑通一次完整推理。
 
-## 迁移实例：一段 YOLOv11 检测代码的前后对比
+## 3.2.7 迁移实例：一段 YOLOv11 检测代码的前后对比
 
 把散落在各处的差异集中到一个具体例子上。这是一段**只用官方文档记载的 API 重写的对照**，不是从某个真实项目直接抄的。
 
-### 3.4.1（pyeasy_dnn）
+### 3.2.7.1 1（pyeasy_dnn）
 
 ```python
 import numpy as np, cv2
@@ -601,7 +612,7 @@ for out in outputs:
 dets = decode_outputs_by_index(raw)
 ```
 
-### 3.5.0（hbm_runtime）
+### 3.2.7.2 0（hbm_runtime）
 
 ```python
 import numpy as np, cv2
@@ -648,7 +659,7 @@ for name, tensor in results[mname].items():
 dets = decode_outputs_by_name(fp32)
 ```
 
-### 逐行差异表
+### 3.2.7.3 逐行差异表
 
 | 行 | 3.4.1 | 3.5.0 | 为什么 |
 | --- | --- | --- | --- |
